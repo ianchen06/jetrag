@@ -9,10 +9,11 @@ from driver import HTTPDriver
 logger = logging.getLogger(__name__)
 
 class Moosejaw:
-    def __init__(self, cfg, queue):
+    def __init__(self, cfg, queue, db):
         self.cfg = cfg
         self.base_url = cfg['base_url']
         self.queue = queue
+        self.db = db
         self.http = HTTPDriver()
 
     def __get_page(self, url):
@@ -83,4 +84,4 @@ class Moosejaw:
         self.store(url, res.text)
 
     def store(self, url, data):
-        pass
+        self.db.put(__name__, data)

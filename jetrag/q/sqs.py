@@ -19,11 +19,17 @@ class SqsQueue:
         self.q = self.client.get_queue_url(QueueName=name)['QueueUrl']
 
     def get(self):
-        msgs = self.client.receive_message(QueueUrl=self.q, WaitTimeSeconds=20)
-        if 'Messages' in msgs:
-            for msg in msgs['Messages']:
-                self.client.delete_message(QueueUrl=self.q, ReceiptHandle=msg['ReceiptHandle'])
-        return msgs
+        while True:
+            res = self.client.receive_message(QueueUrl=self.q, WaitTimeSeconds=20)
+            if 'Messages' in res:
+                msgs = []
+                for msg in res['Messages']:
+                    self.done(msg)
+                    msgs.append(json.loads(msg['Body']))
+                return msgs
 
     def put(self, msg):
         return self.client.send_message(QueueUrl=self.q, MessageBody=json.dumps(msg))
+
+    def done(self, msg):
+        self.client.delete_message(QueueUrl=self.q, ReceiptHandle=msg['ReceiptHandle'])

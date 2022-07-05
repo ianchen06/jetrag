@@ -4,7 +4,10 @@ import click
 
 import crawlers
 from worker import Worker
-import q
+from db.redis import RedisStore
+from db.dynamodb import DynamodbStore
+from q.redis import RedisQueue
+from q.sqs import SqsQueue
 
 logging.basicConfig(level=logging.INFO)
 
@@ -12,6 +15,7 @@ cfg = {
     'queue': {
         'broker': 'sqs'
     },
+    'test': {},
     'moosejaw': {
         'base_url': 'https://moosejaw.com',
         'headers': {
@@ -34,6 +38,9 @@ cfg = {
     }
 }
 
+DB = DynamodbStore()
+Q = SqsQueue
+
 @click.group()
 def cli():
     pass
@@ -41,10 +48,9 @@ def cli():
 @click.command('crawl')
 @click.argument('name')
 def crawl(name):
-    queue_klass = q.get_queue_klass(cfg['queue']['broker'])
-    queue = queue_klass(name)
+    qq = Q(name)
     crawler_klass = crawlers.get_crawler_klass(name)
-    crawler = crawler_klass(cfg[name], queue)
+    crawler = crawler_klass(cfg[name], qq, DB)
     crawler.dispatch()
 
 @click.group()
@@ -55,10 +61,9 @@ def worker():
 @click.argument('name')
 def worker_start(name):
     click.echo(f'starting worker for {name}')
-    queue_klass = q.get_queue_klass(cfg['queue']['broker'])
-    queue = queue_klass(name)
+    qq = Q(name)
     crawler_klass = crawlers.get_crawler_klass(name)
-    crawler = crawler_klass(cfg[name], queue)
+    crawler = crawler_klass(cfg[name], qq, DB)
     w = Worker(crawler)
     w.start()
 
