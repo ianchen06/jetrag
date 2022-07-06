@@ -36,7 +36,12 @@ cfg = {
 }
 
 DB = RedisStore()
-Q = RedisQueue
+QUEUE = RedisQueue
+
+def get_crawler(name, cfg, queue, db):
+    crawler_class = crawlers.get_crawler_class(name)
+    crawler = crawler_class(cfg, queue, db)
+    return crawler
 
 @click.group()
 def cli():
@@ -45,9 +50,10 @@ def cli():
 @click.command('crawl')
 @click.argument('name')
 def crawl(name):
-    qq = Q(name)
-    crawler_klass = crawlers.get_crawler_klass(name)
-    crawler = crawler_klass(cfg[name], qq, DB)
+    # TODO: add if name == 'all', dispatch all crawlers
+    crawler_queue = QUEUE(name)
+    crawler_cfg = cfg[name]
+    crawler = get_crawler(name, crawler_cfg, crawler_queue, DB)
     crawler.dispatch()
 
 @click.group()
@@ -57,10 +63,11 @@ def worker():
 @click.command('start')
 @click.argument('name')
 def worker_start(name):
+    # TODO: add if name == 'all', start workers for all crawlers
     click.echo(f'starting worker for {name}')
-    qq = Q(name)
-    crawler_klass = crawlers.get_crawler_klass(name)
-    crawler = crawler_klass(cfg[name], qq, DB)
+    crawler_queue = QUEUE(name)
+    crawler_cfg = cfg[name]
+    crawler = get_crawler(name, crawler_cfg, crawler_queue, DB)
     w = Worker(crawler)
     w.start()
 
@@ -92,4 +99,5 @@ def main():
     cli()
 
 if __name__ == '__main__':
+    # TODO: read config here and pass down data using Context
     main()

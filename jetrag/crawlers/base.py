@@ -1,3 +1,3 @@
 class Crawler:
-    def start():
+    def dispatch(self):
         pass

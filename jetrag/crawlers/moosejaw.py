@@ -34,7 +34,7 @@ class Moosejaw:
         soup = BeautifulSoup(res.text, 'html.parser')
         navigation = [self.base_url+x for x in re.findall(r'href="(/navigation.+?)"', res.text)]
         more = [self.base_url+x['href'] for x in soup.select('#DrawerActivity a.list-menu-title')]
-        result = list(set(navigation + more))
+        result = set(navigation + more)
         for url in result:
             self.queue.put({'method': 'get_category', 'args': [url]})
         return result
@@ -57,6 +57,8 @@ class Moosejaw:
         if pagination_links:
             last_page = int(soup.select('.pagination-page-link')[-1].text)
             data = [url+"?orderBy=9&beginIndex=%s&pageSize=48"%(48*page) for page in range(last_page)]
+        for url in data:
+            self.queue.put({'method': 'list_products', 'args': [url]})
         return data
 
     def list_products(self, url):
@@ -68,7 +70,9 @@ class Moosejaw:
         :rtype: list
         """
         res = self.__get_page(url)
-        return list(set(re.findall(r'(https://www.moosejaw.com/product/.+?)"', res.text)))
+        data = list(set(re.findall(r'(https://www.moosejaw.com/product/.+?)"', res.text)))
+        for url in data:
+            self.queue.put({'method': 'get_product', 'args': [url]})
 
     def get_product(self, url):
         """Get product HTML from the product URL
@@ -84,4 +88,4 @@ class Moosejaw:
         self.store(url, res.text)
 
     def store(self, url, data):
-        self.db.put(__name__, data)
+        self.db.put('moosejaw', data)
