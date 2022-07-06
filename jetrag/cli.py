@@ -12,9 +12,6 @@ from q.sqs import SqsQueue
 logging.basicConfig(level=logging.INFO)
 
 cfg = {
-    'queue': {
-        'broker': 'sqs'
-    },
     'test': {},
     'moosejaw': {
         'base_url': 'https://moosejaw.com',
@@ -38,8 +35,8 @@ cfg = {
     }
 }
 
-DB = DynamodbStore()
-Q = SqsQueue
+DB = RedisStore()
+Q = RedisQueue
 
 @click.group()
 def cli():
