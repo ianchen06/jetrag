@@ -1,0 +1,6 @@
+# To ensure app dependencies are ported from your virtual environment/host machine into your container, run 'pip freeze > requirements.txt' in the terminal to overwrite this file
+click
+requests
+redis
+boto3
+beautifulsoup4
