@@ -25,3 +25,4 @@
 **/values.dev.yaml
 README.md
 venv
+**/.pytest_cache

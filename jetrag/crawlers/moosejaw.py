@@ -4,7 +4,7 @@ import re
 
 from bs4 import BeautifulSoup
 
-from driver import HTTPDriver
+from http_client import HTTPDriver
 
 logger = logging.getLogger(__name__)
 
@@ -85,7 +85,7 @@ class Moosejaw:
         res = self.__get_page(url)
         if not 'add2CartBtn' in res.text:
             raise Exception("invalid product page")
-        self.store(url, res.text)
+        self.store({'url': url, 'html': res.text})
 
-    def store(self, url, data):
+    def store(self, data):
         self.db.put('moosejaw', data)

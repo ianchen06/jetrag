@@ -2,7 +2,7 @@ import logging
 import random
 import time
 
-from driver import HTTPDriver
+from http_client import HTTPDriver
 from errors import BadIP
 
 logger = logging.getLogger(__name__)
@@ -29,12 +29,12 @@ class Test:
     
     def second(self, url):
         time.sleep(random.randint(1, 3))
-        if is_error(0):
+        if is_error(0.1):
             raise Exception("page invalid")
         if is_error(0):
             raise BadIP("1.2.3.4")
-        self.store('', {'url': url, 'html': url})
+        self.store({'url': url, 'html': url})
         return {'url': url, 'html': url}
 
-    def store(self, url, data):
+    def store(self, data):
         self.db.put('test', data)

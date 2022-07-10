@@ -8,10 +8,20 @@ from db.redis import RedisStore
 from db.dynamodb import DynamodbStore
 from q.redis import RedisQueue
 from q.sqs import SqsQueue
+from driver.ecs import EcsDriver
 
 logging.basicConfig(level=logging.INFO)
 
 cfg = {
+    'queue_name_prefix': '',
+    'worker': {},
+    'driver': {
+        'ecs': {
+            'cluster_name': 'jetrag',
+            'subnet_id': 'subnet-0559c48e10b3682d2',
+            'security_group': 'sg-0be19df1009220e0d'
+        }
+    },
     'test': {},
     'moosejaw': {
         'base_url': 'https://moosejaw.com',
@@ -35,8 +45,9 @@ cfg = {
     }
 }
 
-DB = RedisStore()
-QUEUE = RedisQueue
+DB = DynamodbStore()
+QUEUE = SqsQueue
+DRIVER = EcsDriver
 
 def get_crawler(name, cfg, queue, db):
     crawler_class = crawlers.get_crawler_class(name)
@@ -47,14 +58,24 @@ def get_crawler(name, cfg, queue, db):
 def cli():
     pass
 
-@click.command('crawl')
+@click.command('dispatch')
 @click.argument('name')
-def crawl(name):
-    # TODO: add if name == 'all', dispatch all crawlers
+def dispatch(name):
     crawler_queue = QUEUE(name)
     crawler_cfg = cfg[name]
     crawler = get_crawler(name, crawler_cfg, crawler_queue, DB)
     crawler.dispatch()
+
+@click.command('crawl')
+@click.argument('name')
+def crawl(name):
+    # TODO: add if name == 'all', dispatch all crawlers
+    worker_driver = DRIVER(cfg['driver']['ecs'], name)
+    crawler_queue = QUEUE(name)
+    crawler_cfg = cfg[name]
+    crawler = get_crawler(name, crawler_cfg, crawler_queue, DB)
+    crawler.dispatch()
+    worker_driver.launch()
 
 @click.group()
 def worker():
@@ -65,10 +86,11 @@ def worker():
 def worker_start(name):
     # TODO: add if name == 'all', start workers for all crawlers
     click.echo(f'starting worker for {name}')
+    worker_driver = DRIVER(cfg['driver']['ecs'], name)
     crawler_queue = QUEUE(name)
     crawler_cfg = cfg[name]
     crawler = get_crawler(name, crawler_cfg, crawler_queue, DB)
-    w = Worker(crawler)
+    w = Worker(cfg['worker'], crawler, worker_driver)
     w.start()
 
 @click.group()
@@ -88,10 +110,16 @@ def queue_list():
     res = queue_ctl.list_queues()
     click.echo(res)
 
+# cli subcommands
 cli.add_command(worker)
 cli.add_command(queue)
+cli.add_command(dispatch)
 cli.add_command(crawl)
+
+# worker subcommands
 worker.add_command(worker_start)
+
+# queue subcommands
 queue.add_command(queue_create)
 queue.add_command(queue_list)
 
