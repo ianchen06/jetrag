@@ -5,9 +5,9 @@ import click
 import crawlers
 from worker import Worker
 from db.redis import RedisStore
-from db.dynamodb import DynamodbStore
+from db.s3 import S3Store
 from q.redis import RedisQueue
-from q.sqs import SqsQueue
+from q.sqs import Sqs, SqsQueue
 from driver.ecs import EcsDriver
 
 logging.basicConfig(level=logging.INFO)
@@ -45,8 +45,9 @@ cfg = {
     }
 }
 
-DB = DynamodbStore()
+DB = S3Store('jetrag')
 QUEUE = SqsQueue
+QUEUE_CTL = Sqs
 DRIVER = EcsDriver
 
 def get_crawler(name, cfg, queue, db):
@@ -58,17 +59,21 @@ def get_crawler(name, cfg, queue, db):
 def cli():
     pass
 
+@click.group()
+def crawler():
+    pass
+
 @click.command('dispatch')
 @click.argument('name')
-def dispatch(name):
+def crawler_dispatch(name):
     crawler_queue = QUEUE(name)
     crawler_cfg = cfg[name]
     crawler = get_crawler(name, crawler_cfg, crawler_queue, DB)
     crawler.dispatch()
 
-@click.command('crawl')
+@click.command('start')
 @click.argument('name')
-def crawl(name):
+def crawler_start(name):
     # TODO: add if name == 'all', dispatch all crawlers
     worker_driver = DRIVER(cfg['driver']['ecs'], name)
     crawler_queue = QUEUE(name)
@@ -100,21 +105,29 @@ def queue():
 @click.command('create')
 @click.argument('name')
 def queue_create(name):
-    queue_ctl = q.get_queue_ctl_klass(cfg['queue']['broker'])()
-    res = queue_ctl.create_queue(name)
+    res = QUEUE_CTL.create_queue(name)
     click.echo(f"queue {res} created")
 
 @click.command('list')
 def queue_list():
-    queue_ctl = q.get_queue_ctl_klass(cfg['queue']['broker'])()
-    res = queue_ctl.list_queues()
+    res = QUEUE_CTL.list_queues()
     click.echo(res)
+
+@click.command('put')
+@click.argument('name')
+@click.argument('msg')
+def queue_put(name, msg):
+    c = QUEUE(name)
+    c.put(msg)
 
 # cli subcommands
 cli.add_command(worker)
 cli.add_command(queue)
-cli.add_command(dispatch)
-cli.add_command(crawl)
+cli.add_command(crawler)
+
+# crawler subcommands
+crawler.add_command(crawler_dispatch)
+crawler.add_command(crawler_start)
 
 # worker subcommands
 worker.add_command(worker_start)

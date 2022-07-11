@@ -1,6 +1,7 @@
 import time
 import logging
 import re
+import datetime
 
 from bs4 import BeautifulSoup
 
@@ -88,4 +89,5 @@ class Moosejaw:
         self.store({'url': url, 'html': res.text})
 
     def store(self, data):
-        self.db.put('moosejaw', data)
+        dt = datetime.datetime.now().strftime("%Y%m%d")
+        self.db.put(f'moosejaw/{dt}', data)
