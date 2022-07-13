@@ -11,16 +11,16 @@ class EcsDriver(Driver):
 
     def launch(self):
         return self.client.run_task(
-            taskDefinition='jetrag',
+            taskDefinition=self.cfg['task_definition'],
             launchType='FARGATE',
             cluster=self.cfg['cluster_name'],
             platformVersion='LATEST',
-            count=1,
+            count=self.cfg['count'],
             overrides={
-                'taskRoleArn': 'arn:aws:iam::395407004311:role/jetrag-ecs-task-role',
+                'taskRoleArn': self.cfg['task_role_arn'],#'arn:aws:iam::395407004311:role/jetrag-ecs-task-role',
                 'containerOverrides': [
                     {
-                        'name': 'jetrag',
+                        'name': self.cfg['container_name'],
                         'command': ['worker', 'start', self.name]
                     }
                 ]

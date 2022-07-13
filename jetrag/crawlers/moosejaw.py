@@ -84,7 +84,10 @@ class Moosejaw:
         """
 
         res = self.__get_page(url)
+        if "We're so sorry, but our Fancy Site Protection" in res.text:
+            raise Exception("blocked")
         if not 'add2CartBtn' in res.text:
+            self.store({'url': url, 'html': res.text})
             raise Exception("invalid product page")
         self.store({'url': url, 'html': res.text})
 

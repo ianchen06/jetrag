@@ -4,6 +4,8 @@ import atexit
 import sys
 import signal
 
+import requests
+
 logger = logging.getLogger(__name__)
 class Worker:
     def __init__(self, cfg, crawler, driver):
@@ -42,6 +44,8 @@ class Worker:
         signal.alarm(0)
 
     def start(self):
+        public_ip = requests.get('https://api.ipify.org')
+        logger.info(f"public_ip is {public_ip.text}")
         self.start_shutdown_timer()
         while True:
             # this line will block
@@ -55,6 +59,7 @@ class Worker:
                     msg = self.msgs[-1]
 
                     # get method from crawler and execute with args/kwargs
+                    # TODO: use concurrent.futures to process multiple funcs simultaneously
                     func = getattr(self.crawler, msg['method'])
                     res = func(*msg.get('args', []), **msg.get('kwargs', {}))
                     
