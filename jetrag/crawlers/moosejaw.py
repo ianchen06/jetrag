@@ -10,11 +10,14 @@ from http_client import HTTPDriver
 logger = logging.getLogger(__name__)
 
 class Moosejaw:
-    def __init__(self, cfg, queue, db):
+    def __init__(self, cfg, queue, db, notifier, metadb):
         self.cfg = cfg
         self.base_url = cfg['base_url']
         self.queue = queue
         self.db = db
+        self.notifier = notifier
+        self.metadb = metadb
+        self.dt = datetime.datetime.now().strftime("%Y%m%d")
         self.http = HTTPDriver()
 
     def __get_page(self, url):
@@ -92,5 +95,4 @@ class Moosejaw:
         self.store({'url': url, 'html': res.text})
 
     def store(self, data):
-        dt = datetime.datetime.now().strftime("%Y%m%d")
-        self.db.put(f'moosejaw/{dt}', data)
+        self.db.put(f'moosejaw/{self.dt}', data)
