@@ -40,21 +40,13 @@ cfg = {
     'moosejaw': {
         'base_url': 'https://moosejaw.com',
         'headers': {
-            'authority': 'www.moosejaw.com',
-            'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9',
-            'accept-language': 'en-US,en;q=0.9',
-            'cache-control': 'no-cache',
-            'pragma': 'no-cache',
-            'referer': 'https://www.moosejaw.com/',
-            'sec-ch-ua': '".Not/A)Brand";v="99", "Google Chrome";v="103", "Chromium";v="103"',
-            'sec-ch-ua-mobile': '?0',
-            'sec-ch-ua-platform': '"macOS"',
-            'sec-fetch-dest': 'document',
-            'sec-fetch-mode': 'navigate',
-            'sec-fetch-site': 'same-origin',
-            'sec-fetch-user': '?1',
-            'upgrade-insecure-requests': '1',
-            'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/103.0.0.0 Safari/537.36',
+            'Connection': 'keep-alive',
+            'Upgrade-Insecure-Requests': '1',
+            'Host': 'www.moosejaw.com',
+            'TE': 'Trailers',
+            'Accept-Language': 'ja,en-US;q=0.7,en;q=0.3',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.14; rv:88.0) Gecko/20100101 Firefox/88.0'
         }
     }
 }
@@ -84,9 +76,11 @@ def crawler():
 @click.command('dispatch')
 @click.argument('name')
 def crawler_dispatch(name):
-    crawler_queue = QUEUE(name)
+    crawler_queue = QUEUE(cfg['queue_name_prefix'] + name + '-' + cfg['env'])
     crawler_cfg = cfg[name]
-    crawler = get_crawler(name, crawler_cfg, crawler_queue, DB)
+    notifier = NOTIFIER(SLACK_WEBHOOK_URL)
+    metadb = METADB()
+    crawler = get_crawler(name, crawler_cfg, crawler_queue, DB, notifier,  metadb)
     crawler.dispatch()
 
 @click.command('start')
@@ -112,7 +106,7 @@ def worker_start(name):
     notifier = NOTIFIER(SLACK_WEBHOOK_URL)
     metadb = METADB()
     crawler = get_crawler(name, crawler_cfg, crawler_queue, db, notifier, metadb)
-    w = Worker(cfg['worker'], crawler, worker_driver)
+    w = Worker(cfg['worker'], crawler, worker_driver, notifier,metadb)
     w.start()
 
 @click.group()

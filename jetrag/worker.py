@@ -8,10 +8,12 @@ import requests
 
 logger = logging.getLogger(__name__)
 class Worker:
-    def __init__(self, cfg, crawler, driver):
+    def __init__(self, cfg, crawler, driver, notifier, metadb):
         self.cfg = cfg
         self.crawler = crawler
         self.driver = driver
+        self.notifier = notifier
+        self.metadb = metadb
         self.msgs = []
         self.num_job_succeeded = 0
         self.timeout_secs = 30
@@ -33,11 +35,13 @@ class Worker:
         sys.exit(1)
 
     def handle_error(self, tb):
-        logger.error(tb)
+        error_msg = f"{tb}\n{self.num_job_succeeded}"
+        logger.error(error_msg)
+        self.notifier.send({'text': error_msg})
         self.restart()
 
     def start_shutdown_timer(self):
-        logger.info("starting shutdown timer")
+        logger.debug("starting shutdown timer")
         signal.alarm(self.timeout_secs)
 
     def stop_shutdown_timer(self):
@@ -51,7 +55,7 @@ class Worker:
             # this line will block
             self.msgs = self.crawler.queue.get()
             while self.msgs:
-                logger.info("got msg")
+                logger.debug("got msg")
                 self.stop_shutdown_timer()
                 logger.info(self.msgs)
                 try:

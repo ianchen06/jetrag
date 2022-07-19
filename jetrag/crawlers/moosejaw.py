@@ -2,8 +2,11 @@ import time
 import logging
 import re
 import datetime
+import copy
+import random
 
 from bs4 import BeautifulSoup
+import requests
 
 from http_client import HTTPDriver
 
@@ -19,10 +22,15 @@ class Moosejaw:
         self.metadb = metadb
         self.dt = datetime.datetime.now().strftime("%Y%m%d")
         self.http = HTTPDriver()
+        self.headers = cfg['headers']
 
     def __get_page(self, url):
-        time.sleep(0.1)
-        return self.http.session.get(url, headers=self.cfg['headers'])
+        time.sleep(1)
+        user_agent = self.headers['User-Agent'].replace('88.0', f'88.{random.randint(0, 100)}')
+        headers = copy.deepcopy(self.headers)
+        headers['User-Agent'] = user_agent
+        headers[f"{random.randint(0, 100)}"] = f'{random.randint(0, 100)}'
+        return requests.get(url, headers=headers)
 
     def dispatch(self):
         logger.info('disatching job')

@@ -4,3 +4,6 @@ requests
 redis
 boto3
 beautifulsoup4
+lxml
+sqlacodegen
+sqlalchemy-aurora-data-api
