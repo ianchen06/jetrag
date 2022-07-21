@@ -40,14 +40,14 @@ cfg = {
     'moosejaw': {
         'base_url': 'https://moosejaw.com',
         'headers': {
-            'Connection': 'keep-alive',
-            'Upgrade-Insecure-Requests': '1',
-            'Host': 'www.moosejaw.com',
-            'TE': 'Trailers',
-            'Accept-Language': 'ja,en-US;q=0.7,en;q=0.3',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.14; rv:88.0) Gecko/20100101 Firefox/88.0'
-        }
+                'Connection': 'keep-alive',
+                'Upgrade-Insecure-Requests': '1',
+                'Host': 'www.moosejaw.com',
+                'TE': 'Trailers',
+                'Accept-Language': 'ja,en-US;q=0.7,en;q=0.3',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+                'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.14; rv:88.0) Gecko/20100101 Firefox/88.0',
+        },
     }
 }
 
@@ -67,6 +67,15 @@ def get_crawler(name, cfg, queue, db, notifier, metadb):
 
 @click.group()
 def cli():
+    pass
+
+@click.group()
+def loader():
+    pass
+
+@click.command('start')
+@click.argument('name')
+def loader_start(name):
     pass
 
 @click.group()
@@ -135,6 +144,7 @@ def queue_put(name, msg):
 cli.add_command(worker)
 cli.add_command(queue)
 cli.add_command(crawler)
+cli.add_command(loader)
 
 # crawler subcommands
 crawler.add_command(crawler_dispatch)
@@ -146,6 +156,9 @@ worker.add_command(worker_start)
 # queue subcommands
 queue.add_command(queue_create)
 queue.add_command(queue_list)
+
+# loader subcommands
+loader.add_command(loader_start)
 
 def main():
     cli()

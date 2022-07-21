@@ -22,7 +22,7 @@ class Item(Base):
 class Category(Base):
     __tablename__ = 'category'
 
-    id = Column(INTEGER(11), primary_key=True)
+    id = Column(INTEGER(11), autoincrement=True, primary_key=True)
     item_id = Column(String(17), nullable=False)
     value = Column(String(256), nullable=False)
     edited = Column(DateTime, nullable=False, server_default=text("CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP"))
@@ -32,7 +32,7 @@ class Category(Base):
 class Photo(Base):
     __tablename__ = 'photo'
 
-    id = Column(INTEGER(11), primary_key=True)
+    id = Column(INTEGER(11), autoincrement=True, primary_key=True)
     item_id = Column(String(17), nullable=False)
     url = Column(String(512), nullable=False)
     edited = Column(DateTime, nullable=False, server_default=text("CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP"))
@@ -42,7 +42,7 @@ class Photo(Base):
 class ProductSpecification(Base):
     __tablename__ = 'product_specification'
 
-    id = Column(INTEGER(11), primary_key=True)
+    id = Column(INTEGER(11), autoincrement=True, primary_key=True)
     item_id = Column(String(17), nullable=False)
     value = Column(Text, nullable=False)
     edited = Column(DateTime, nullable=False, server_default=text("CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP"))
@@ -52,7 +52,7 @@ class ProductSpecification(Base):
 class Size(Base):
     __tablename__ = 'size'
 
-    id = Column(INTEGER(11), primary_key=True)
+    id = Column(INTEGER(11), autoincrement=True, primary_key=True)
     item_id = Column(String(17), nullable=False)
     size = Column(String(128), nullable=False)
     item_no = Column(INTEGER(11), nullable=False)
