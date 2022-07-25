@@ -37,8 +37,15 @@ class MoosejawLoader:
                         item_url=product['item_url'],
                         color=product['color']
                     )
-                    self.session.add(item)
-                    self.session.flush()
+                    try:
+                        self.session.add(item)
+                        self.session.flush()
+                    except Exception as e:
+                        self.session.rollback()
+                        logger.error(f"{e}")
+                        for row in to_insert:
+                            logger.error(row.__dict__)
+                        raise(e)
                     product_spec = ProductSpecification(
                         item_id=product_id,
                         value=product['product_specifications']
@@ -74,6 +81,7 @@ class MoosejawLoader:
         try:
             self.session.commit()
         except Exception as e:
+            self.session.rollback()
             logger.error(f"{e}")
             for row in to_insert:
                 logger.error(row.__dict__)

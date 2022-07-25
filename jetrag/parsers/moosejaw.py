@@ -42,7 +42,7 @@ class MoosejawParser:
                     continue
                 res = {}
                 res['color'] = row.get('color', 'None')
-                res['size'] = row['size']
+                res['size'] = row.get('size', 'None')
                 res['item_no'] = row['sku']
 
                 c_key = f"{res['color'].lower()}_{res['size'].lower()}"
@@ -55,7 +55,7 @@ class MoosejawParser:
                 res['item_url'] = data['url']
                 res['item_name'] = data['name']
                 res['item_code'] = res['item_url'].split('_')[1]
-                res['price'] = row['offers']['price']
+                res['price'] = 0 if not row['offers']['price'] else row['offers']['price']
                 res['item_photo'] = [row['image']] + list(general_imgs)
                 res['product_specifications'] = json.dumps(product_specification)
                 product_data.append(res)
