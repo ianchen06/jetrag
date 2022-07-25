@@ -32,6 +32,7 @@ class Worker:
 
     def handle_alarm_signal(self, signum, frame):
         logger.info("timeout waiting for tasks from queue")
+        self.notifier.send({'text': 'timeout waiting for tasks from queue'})
         sys.exit(1)
 
     def handle_error(self, tb):
