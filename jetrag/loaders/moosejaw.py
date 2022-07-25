@@ -24,9 +24,10 @@ class MoosejawLoader:
         for products in products_list:
             seen_size = {}
             for product in products:
+                product_color = product['color'].lower()
                 product_id = uuid.uuid3(
                     uuid.UUID("850aeee8-e173-4da1-9d6b-dd06e4b06747"),
-                    f"{product['item_code']}{product['color']}"
+                    f"{product['item_code']}{product_color}"
                 ).hex[:17]
                 if not product_id in done:
                     done[product_id] = 1
@@ -35,7 +36,7 @@ class MoosejawLoader:
                         item_code=product['item_code'],
                         item_name=product['item_name'],
                         item_url=product['item_url'],
-                        color=product['color']
+                        color=product_color
                     )
                     try:
                         self.session.add(item)
