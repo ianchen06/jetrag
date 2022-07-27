@@ -19,14 +19,21 @@ class SqsQueue:
         self.q = self.client.get_queue_url(QueueName=name)['QueueUrl']
 
     def get(self):
-        while True:
-            res = self.client.receive_message(QueueUrl=self.q, WaitTimeSeconds=20)
-            if 'Messages' in res:
-                msgs = []
-                for msg in res['Messages']:
-                    self.done(msg)
-                    msgs.append(json.loads(msg['Body']))
-                return msgs
+        """return one message from SQS
+
+        :return: Message
+        :rtype: dict
+        """
+        res = self.client.receive_message(
+            QueueUrl=self.q,
+            WaitTimeSeconds=20,
+            VisibilityTimeout=30,
+            MaxNumberOfMessages=1
+        )
+        if 'Messages' in res:
+            msgs = res['Messages']
+            if msgs:
+                return json.loads(msgs[0]['Body'])
 
     def put(self, msg):
         return self.client.send_message(QueueUrl=self.q, MessageBody=json.dumps(msg))

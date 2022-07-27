@@ -6,23 +6,26 @@ import copy
 import random
 
 from bs4 import BeautifulSoup
-import requests
 
 from http_client import HTTPDriver
+from parsers.moosejaw import MoosejawParser
+from loaders.moosejaw import MoosejawLoader
 
 logger = logging.getLogger(__name__)
 
 class Moosejaw:
-    def __init__(self, cfg, queue, db, notifier, metadb):
+    def __init__(self, cfg, queue, raw_store, sql_alchemy_cfg, notifier, metadb):
         self.cfg = cfg
         self.base_url = cfg['base_url']
         self.queue = queue
-        self.db = db
+        self.raw_store = raw_store
         self.notifier = notifier
         self.metadb = metadb
         self.dt = datetime.datetime.now().strftime("%Y%m%d")
         self.http = HTTPDriver()
         self.headers = cfg['headers']
+        self.parser = MoosejawParser()
+        self.loader = MoosejawLoader(sql_alchemy_cfg, '', self.dt)
 
     def __get_page(self, url):
         time.sleep(1)
@@ -104,7 +107,12 @@ class Moosejaw:
         if not 'add2CartBtn' in res.text:
             self.store({'url': url, 'html': res.text})
             raise Exception("invalid product page")
-        self.store({'url': url, 'html': res.text})
+        self.store_html({'url': url, 'html': res.text})
+        data = self.parser.parse(res.text)
+        self.store_db(data)
 
-    def store(self, data):
-        self.db.put(f'moosejaw/{self.dt}', data)
+    def store_html(self, data):
+        self.raw_store.put(f'moosejaw/{self.dt}', data)
+
+    def store_db(self, data):
+        self.loader.load_update(data)

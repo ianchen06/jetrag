@@ -9,7 +9,9 @@ class EcsDriver(Driver):
         self.name = name
         self.client = boto3.client('ecs')
 
-    def launch(self):
+    def launch(self, command=[]):
+        if not command:
+            command = ['python', 'jetrag/cli.py', 'worker', 'start', self.name]
         return self.client.run_task(
             taskDefinition=self.cfg['task_definition'],
             launchType='FARGATE',
@@ -21,7 +23,7 @@ class EcsDriver(Driver):
                 'containerOverrides': [
                     {
                         'name': self.cfg['container_name'],
-                        'command': ['worker', 'start', self.name]
+                        'command': command
                     }
                 ]
             },
@@ -35,7 +37,6 @@ class EcsDriver(Driver):
                 }
             }
         )
-
 
     def terminate(self):
         pass

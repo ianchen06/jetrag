@@ -3,7 +3,7 @@ import threading
 import multiprocessing as mp
 import traceback
 import sys
-import queue
+import time
 
 from sqlalchemy import select
 
@@ -76,6 +76,14 @@ if __name__ == '__main__':
 
     # DEBUG
     #filenames_all = [x for x in filenames_all if '10409428' in x] + filenames_all
+    
+    # wake up db
+    try:
+        c.session.execute("SELECT * FROM item limit 1")
+    except Exception as e:
+        logger.error(e)
+        time.sleep(30)
+
     page_size = 500
     page = 0
     item_codes = []

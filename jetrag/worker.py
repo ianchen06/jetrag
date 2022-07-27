@@ -14,7 +14,6 @@ class Worker:
         self.driver = driver
         self.notifier = notifier
         self.metadb = metadb
-        self.msgs = []
         self.num_job_succeeded = 0
         self.timeout_secs = 30
         atexit.register(self.cleanup)
@@ -22,8 +21,6 @@ class Worker:
 
     def cleanup(self):
         logger.info('exiting...')
-        # put leftover msgs in cache back into queue
-        [self.crawler.queue.put(msg) for msg in self.msgs] 
     
     def restart(self):
         logger.info("restarting...")
@@ -54,26 +51,19 @@ class Worker:
         self.start_shutdown_timer()
         while True:
             # this line will block
-            self.msgs = self.crawler.queue.get()
-            while self.msgs:
-                logger.debug("got msg")
-                self.stop_shutdown_timer()
-                logger.info(self.msgs)
-                try:
-                    # peek the last msg in cache
-                    msg = self.msgs[-1]
-
-                    # get method from crawler and execute with args/kwargs
-                    # TODO: use concurrent.futures to process multiple funcs simultaneously
-                    func = getattr(self.crawler, msg['method'])
-                    res = func(*msg.get('args', []), **msg.get('kwargs', {}))
-                    
-                    # job succeed
-                    # remove the msg from cache
-                    self.msgs.pop()
-                    self.num_job_succeeded += 1
-                    logger.info(f"success: {res}")
-                    self.start_shutdown_timer()
-                except Exception as e:
-                    tb = traceback.format_exc()
-                    self.handle_error(f"{tb}\n{e}")
+            msg = self.crawler.queue.get()
+            logger.debug("got msg")
+            self.stop_shutdown_timer()
+            logger.info(msg)
+            try:
+                # get method from crawler and execute with args/kwargs
+                func = getattr(self.crawler, msg['method'])
+                res = func(*msg.get('args', []), **msg.get('kwargs', {}))
+                
+                # job succeed
+                self.num_job_succeeded += 1
+                logger.info(f"success: {res}")
+                self.start_shutdown_timer()
+            except Exception as e:
+                tb = traceback.format_exc()
+                self.handle_error(f"{tb}\n{e}")

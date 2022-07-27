@@ -1,7 +1,8 @@
 import unittest
 import logging
+import json
 
-from jetrag.parsers.moosejaw import MoosejawParser
+from parsers.moosejaw import MoosejawParser
 
 class TestMoosejawParser(unittest.TestCase):
     logger = logging.getLogger(__name__)
@@ -11,7 +12,8 @@ class TestMoosejawParser(unittest.TestCase):
         p = MoosejawParser()
         html = open('./tests/html/moosejaw/product.html').read()
         res = p.parse(html)
-        self.logger.info(res)
+        json_data = json.dumps(res, indent=4, ensure_ascii=False)
+        self.logger.info(json_data)
 
 if __name__ == '__main__':
     unittest.main()

@@ -1,5 +1,6 @@
 import logging
 import os
+import datetime
 
 import click
 
@@ -34,6 +35,16 @@ cfg = {
         's3': {
             'bucket_name': 'jetrag3',
             'base_path': ''
+        },
+        'sqlalchemy': {
+            #'conn_str': 'mysql+pymysql://root:mysql@localhost:3306',
+            'conn_str': 'mysql+auroradataapi://:@',
+            'aws_access_key_id': os.getenv("RDS_AWS_ACCESS_KEY_ID"),
+            'aws_secret_access_key': os.getenv("RDS_AWS_SECRET_ACCESS_KEY"),
+            'connect_args': {
+                'aurora_cluster_arn': 'arn:aws:rds:ap-northeast-1:179980757190:cluster:jetrag-en-db',
+                'secret_arn': 'arn:aws:secretsmanager:ap-northeast-1:179980757190:secret:rds-db-credentials/cluster-LCOGPYN4KMRUKNKL24EDFTGZKE/jetrag-j0paFO',
+            }
         }
     },
     'test': {},
@@ -51,7 +62,7 @@ cfg = {
     }
 }
 
-DB = S3Store
+RAW_STORE = S3Store
 QUEUE = SqsQueue
 QUEUE_CTL = Sqs
 DRIVER = EcsDriver
@@ -60,9 +71,9 @@ METADB = DynamodbStore
 
 SLACK_WEBHOOK_URL = os.getenv('SLACK_WEBHOOK_URL')
 
-def get_crawler(name, cfg, queue, db, notifier, metadb):
+def get_crawler(name, cfg, queue, raw_store, conn_str, notifier, metadb):
     crawler_class = crawlers.get_crawler_class(name)
-    crawler = crawler_class(cfg, queue, db, notifier, metadb)
+    crawler = crawler_class(cfg, queue, raw_store, conn_str, notifier, metadb)
     return crawler
 
 @click.group()
@@ -76,8 +87,11 @@ def loader():
 @click.command('start')
 @click.argument('name')
 def loader_start(name):
-    pass
-
+    dt = datetime.datetime.now().strftime('%Y%m%d')
+    cfg['driver']['ecs']['task_definition'] = cfg['driver']['ecs']['task_definition']+'-etl'
+    loader_driver = DRIVER(cfg['driver']['ecs'], name)
+    loader_driver.launch(['python', 'jetrag/load.py', dt])
+    
 @click.group()
 def crawler():
     pass
@@ -89,7 +103,7 @@ def crawler_dispatch(name):
     crawler_cfg = cfg[name]
     notifier = NOTIFIER(SLACK_WEBHOOK_URL)
     metadb = METADB()
-    crawler = get_crawler(name, crawler_cfg, crawler_queue, DB, notifier,  metadb)
+    crawler = get_crawler(name, crawler_cfg, crawler_queue, '', cfg['db']['sqlalchemy'], notifier, metadb)
     crawler.dispatch()
 
 @click.command('start')
@@ -97,7 +111,7 @@ def crawler_dispatch(name):
 def crawler_start(name):
     # TODO: add if name == 'all', dispatch all crawlers
     worker_driver = DRIVER(cfg['driver']['ecs'], name)
-    worker_driver.launch()
+    worker_driver.launch(['python', 'jetrag/cli.py', 'worker', 'start', name])
 
 @click.group()
 def worker():
@@ -111,10 +125,10 @@ def worker_start(name):
     worker_driver = DRIVER(cfg['driver']['ecs'], name)
     crawler_queue = QUEUE(cfg['queue_name_prefix'] + name + '-' + cfg['env'])
     crawler_cfg = cfg[name]
-    db = DB(cfg['db']['s3']['bucket_name'], cfg['db']['s3']['base_path'])
+    raw_store = RAW_STORE(cfg['db']['s3']['bucket_name'], cfg['db']['s3']['base_path'])
     notifier = NOTIFIER(SLACK_WEBHOOK_URL)
     metadb = METADB()
-    crawler = get_crawler(name, crawler_cfg, crawler_queue, db, notifier, metadb)
+    crawler = get_crawler(name, crawler_cfg, crawler_queue, raw_store, cfg['db']['sqlalchemy'], notifier, metadb)
     w = Worker(cfg['worker'], crawler, worker_driver, notifier,metadb)
     w.start()
 
