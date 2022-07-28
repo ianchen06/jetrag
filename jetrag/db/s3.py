@@ -5,13 +5,19 @@ import boto3
 import botocore
 
 class S3Store:
-    def __init__(self, db, base_path):
+    def __init__(self, cfg):
+        """
+        cfg = {
+            'bucket_name': 'jetrag3',
+            'base_path': ''
+        }
+        """
         client_config = botocore.config.Config(
             max_pool_connections=50
         )
         self.s3 = boto3.resource('s3', config=client_config)
-        self.bucket = self.s3.Bucket(db)
-        self.base_path = base_path
+        self.bucket = self.s3.Bucket(cfg['bucket_name'])
+        self.base_path = cfg['base_path']
 
     def put(self, table, data):
         d = data['html']

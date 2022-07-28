@@ -14,13 +14,12 @@ from loaders.moosejaw import MoosejawLoader
 logger = logging.getLogger(__name__)
 
 class Moosejaw:
-    def __init__(self, cfg, queue, raw_store, sql_alchemy_cfg, notifier, metadb):
+    def __init__(self, cfg, queue, html_store, sql_alchemy_cfg, notifier):
         self.cfg = cfg
         self.base_url = cfg['base_url']
         self.queue = queue
-        self.raw_store = raw_store
+        self.html_store = html_store
         self.notifier = notifier
-        self.metadb = metadb
         self.dt = datetime.datetime.now().strftime("%Y%m%d")
         self.http = HTTPDriver()
         self.headers = cfg['headers']
@@ -112,7 +111,7 @@ class Moosejaw:
         self.store_db(data)
 
     def store_html(self, data):
-        self.raw_store.put(f'moosejaw/{self.dt}', data)
+        self.html_store.put(f'moosejaw/{self.dt}', data)
 
     def store_db(self, data):
         self.loader.load_update(data)

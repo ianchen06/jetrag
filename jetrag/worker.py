@@ -8,12 +8,11 @@ import requests
 
 logger = logging.getLogger(__name__)
 class Worker:
-    def __init__(self, cfg, crawler, driver, notifier, metadb):
+    def __init__(self, cfg, crawler, driver, notifier):
         self.cfg = cfg
         self.crawler = crawler
         self.driver = driver
         self.notifier = notifier
-        self.metadb = metadb
         self.num_job_succeeded = 0
         self.timeout_secs = 30
         atexit.register(self.cleanup)
