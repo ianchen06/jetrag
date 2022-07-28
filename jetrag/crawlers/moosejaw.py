@@ -40,7 +40,7 @@ class Moosejaw:
         return self.http.request_with_random_ua('GET', url, headers=headers)
 
     def dispatch(self):
-        logger.info('disatching job')
+        logger.info('dispatching job')
         self.queue.put({'method': 'list_categories'})
 
     def list_categories(self):

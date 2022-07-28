@@ -49,6 +49,7 @@ cfg = {
     },
     'test': {},
     'moosejaw': {
+        'concurrency': 5,
         'base_url': 'https://moosejaw.com',
         'headers': {
                 'Connection': 'keep-alive',
@@ -99,6 +100,9 @@ def crawler():
 @click.command('dispatch')
 @click.argument('name')
 def crawler_dispatch(name):
+    _crawler_dispatch(name)
+
+def _crawler_dispatch(name):
     crawler_queue = QUEUE(cfg['queue_name_prefix'] + name + '-' + cfg['env'])
     crawler_cfg = cfg[name]
     notifier = NOTIFIER(SLACK_WEBHOOK_URL)
@@ -110,8 +114,10 @@ def crawler_dispatch(name):
 @click.argument('name')
 def crawler_start(name):
     # TODO: add if name == 'all', dispatch all crawlers
+    _crawler_dispatch(name)
     worker_driver = DRIVER(cfg['driver']['ecs'], name)
-    worker_driver.launch(['python', 'jetrag/cli.py', 'worker', 'start', name])
+    for num in range(cfg['moosejaw']['concurrency']):
+        worker_driver.launch(['python', 'jetrag/cli.py', 'worker', 'start', name])
 
 @click.group()
 def worker():
