@@ -50,7 +50,7 @@ class Worker:
         self.start_shutdown_timer()
         while True:
             # this line will block
-            msg = self.crawler.queue.get()
+            receipt_handle, msg = self.crawler.queue.get()
             logger.debug("got msg")
             self.stop_shutdown_timer()
             logger.info(msg)
@@ -62,6 +62,7 @@ class Worker:
                 # job succeed
                 self.num_job_succeeded += 1
                 logger.info(f"success: {res}")
+                self.crawler.queue.done(receipt_handle)
                 self.start_shutdown_timer()
             except Exception as e:
                 tb = traceback.format_exc()

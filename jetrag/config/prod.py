@@ -1,7 +1,7 @@
 import os
 
 cfg = {
-    'env': 'prod',
+    'env': 'dev',
     'queue': {
         'type': 'sqs',
         'name_template': 'jetrag3-sqs-%s'
@@ -17,6 +17,12 @@ cfg = {
             'task_role_arn': 'arn:aws:iam::068993006585:role/jetrag3-crawler-ecs-task-role',
             'subnet_id': 'subnet-0d8af4bf75baa139e',
             'security_group': 'sg-0f326cd91a4b8cfbf'
+        }
+    },
+    'notifications': {
+        'type': 'slack',
+        'slack': {
+            'webhook_url': os.getenv('SLACK_WEBHOOK_URL')
         }
     },
     'html_store': {

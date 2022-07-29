@@ -1,6 +1,9 @@
 import json
+import logging
 
 import boto3
+
+logger = logging.getLogger(__name__)
 
 class Sqs:
     def __init__(self):
@@ -33,10 +36,12 @@ class SqsQueue:
         if 'Messages' in res:
             msgs = res['Messages']
             if msgs:
-                return json.loads(msgs[0]['Body'])
+                receipt_handle = msgs[0]['ReceiptHandle']
+                return receipt_handle, json.loads(msgs[0]['Body'])
 
     def put(self, msg):
         return self.client.send_message(QueueUrl=self.q, MessageBody=json.dumps(msg))
 
-    def done(self, msg):
-        self.client.delete_message(QueueUrl=self.q, ReceiptHandle=msg['ReceiptHandle'])
+    def done(self, receipt_handle):
+        logger.debug(f"deleting receipt_handle {receipt_handle}")
+        self.client.delete_message(QueueUrl=self.q, ReceiptHandle=receipt_handle)

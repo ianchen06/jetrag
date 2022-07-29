@@ -34,7 +34,7 @@ class Moosejaw:
         headers['User-Agent'] = ua
         for x in range(random.randint(1, 10)):
             headers[f"{random.randint(0, 100)}"] = f'{random.randint(0, 100)}'
-        logger.info(headers)
+        logger.debug(headers)
         #return requests.request('GET', url, headers=headers)
         return self.http.request_with_random_ua('GET', url, headers=headers)
 

@@ -10,5 +10,4 @@ class HTTPDriver:
     def request_with_random_ua(self, method, url, **kwargs):
         ua = random.choice(self.ua_list)
         kwargs['headers']['User-Agent'] = ua
-        print(kwargs)
         return requests.request(method, url, **kwargs)
