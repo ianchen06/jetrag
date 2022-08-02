@@ -2,9 +2,13 @@ import os
 
 cfg = {
     'env': 'dev',
+    'manager': {
+        'url': 'https://7l2topnpfj.execute-api.ap-northeast-1.amazonaws.com/dev',
+        'token': os.getenv("JETRAG_MANAGER_TOKEN", '')
+    },
     'queue': {
         'type': 'sqs',
-        'name_template': 'jetrag3-sqs-%s-dev'
+        'name_template': 'jetrag3-crawler-sqs-dev'
     },
     'worker': {},
     'driver': {
@@ -13,7 +17,7 @@ cfg = {
             'cluster_name': 'jetrag3-cluster',
             'container_name': 'jetrag3',
             'count': 1,
-            'task_definition': 'jetrag3-crawler',
+            'task_definition': 'jetrag3-crawler-dev',
             'task_role_arn': 'arn:aws:iam::068993006585:role/jetrag3-crawler-ecs-task-role',
             'subnet_id': 'subnet-0d8af4bf75baa139e',
             'security_group': 'sg-0f326cd91a4b8cfbf'
@@ -36,11 +40,11 @@ cfg = {
         'sqlalchemy': {
             #'conn_str': 'mysql+pymysql://root:mysql@localhost:3306',
             'conn_str': 'mysql+auroradataapi://:@',
-            'aws_access_key_id': os.getenv("RDS_AWS_ACCESS_KEY_ID"),
-            'aws_secret_access_key': os.getenv("RDS_AWS_SECRET_ACCESS_KEY"),
+            'aws_access_key_id': os.getenv("RDS_AWS_ACCESS_KEY_ID", ""),
+            'aws_secret_access_key': os.getenv("RDS_AWS_SECRET_ACCESS_KEY", ""),
             'connect_args': {
-                'aurora_cluster_arn': 'arn:aws:rds:ap-northeast-1:179980757190:cluster:jetrag-en-db',
-                'secret_arn': 'arn:aws:secretsmanager:ap-northeast-1:179980757190:secret:rds-db-credentials/cluster-LCOGPYN4KMRUKNKL24EDFTGZKE/jetrag-j0paFO',
+                'aurora_cluster_arn': 'arn:aws:rds:ap-northeast-1:068993006585:cluster:jetrag3',
+                'secret_arn': 'arn:aws:secretsmanager:ap-northeast-1:068993006585:secret:rds-db-credentials/cluster-YXGYNX2ORLFS6RYDNGEBFTMHHA/jetrag-PvBX2f',
             }
         }
     },

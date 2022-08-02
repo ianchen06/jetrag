@@ -4,8 +4,9 @@ from driver import Driver
 
 
 class EcsDriver(Driver):
-    def __init__(self, cfg, name):
+    def __init__(self, cfg, name, environment={}):
         self.cfg = cfg
+        self.environment = environment
         self.name = name
         self.client = boto3.client('ecs')
 
@@ -23,7 +24,8 @@ class EcsDriver(Driver):
                 'containerOverrides': [
                     {
                         'name': self.cfg['container_name'],
-                        'command': command
+                        'command': command,
+                        'environment': self.environment,
                     }
                 ]
             },

@@ -15,6 +15,7 @@ logger = logging.getLogger(__name__)
 
 class Moosejaw:
     def __init__(self, cfg, queue, html_store, sql_alchemy_cfg, notifier):
+        self.name = 'moosejaw'
         self.cfg = cfg
         self.base_url = cfg['base_url']
         self.queue = queue

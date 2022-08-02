@@ -3,6 +3,7 @@ import traceback
 import atexit
 import sys
 import signal
+import datetime
 
 import requests
 
@@ -28,7 +29,11 @@ class Worker:
 
     def handle_alarm_signal(self, signum, frame):
         logger.info("timeout waiting for tasks from queue")
-        self.notifier.send({'text': 'timeout waiting for tasks from queue'})
+        #self.notifier.send({'text': 'timeout waiting for tasks from queue'})
+        dt = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%d")
+        requests.post(self.cfg['manager']['url']+'/worker/done',
+                    headers={'Authorization': f"Bearer {self.cfg['manager']['token']}"},
+                    json={'dt': dt, 'name': f"{self.crawler.name}-{self.cfg['env']}"})
         sys.exit(1)
 
     def handle_error(self, tb):
@@ -51,6 +56,8 @@ class Worker:
         while True:
             # this line will block
             receipt_handle, msg = self.crawler.queue.get()
+            if not msg:
+                continue
             logger.debug("got msg")
             self.stop_shutdown_timer()
             logger.info(msg)

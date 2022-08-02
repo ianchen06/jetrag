@@ -38,6 +38,7 @@ class SqsQueue:
             if msgs:
                 receipt_handle = msgs[0]['ReceiptHandle']
                 return receipt_handle, json.loads(msgs[0]['Body'])
+        return '', ''
 
     def put(self, msg):
         return self.client.send_message(QueueUrl=self.q, MessageBody=json.dumps(msg))

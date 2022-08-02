@@ -3,16 +3,11 @@ import os
 import datetime
 
 import click
+import requests
 
 import crawlers
 from worker import Worker
-from db.redis import RedisStore
-from db.s3 import S3Store
-from q.redis import RedisQueue
-from q.sqs import Sqs, SqsQueue
-from driver.ecs import EcsDriver
-from db.dynamodb import DynamodbStore
-from notification.slack import SlackNotifier
+
 
 logging.basicConfig(level=logging.INFO)
 
@@ -40,7 +35,7 @@ def get_queue(cfg, name):
         raise(f"queue type {queue_type} is not supported")
     if queue_type == 'sqs':
         from q.sqs import SqsQueue as queue
-    return queue(cfg['queue']['name_template']%name)
+    return queue(cfg['queue']['name_template'].format(name))
 
 def get_cfg(env='dev'):
     if env == 'dev':
@@ -51,9 +46,16 @@ def get_cfg(env='dev'):
 
 def get_driver(cfg, name):
     driver_type = cfg['driver']['type']
+    envvars = ["JETRAG_ENV", "RDS_AWS_ACCESS_KEY_ID", "RDS_AWS_SECRET_ACCESS_KEY"]
+    environment = []
+    for envvar in envvars:
+        environment.append({
+            'name': envvar,
+            'value': os.getenv(envvar)
+        })
     if driver_type == 'ecs':
         from driver.ecs import EcsDriver as driver
-    return driver(cfg['driver'][driver_type], name)
+    return driver(cfg['driver'][driver_type], name, environment)
 
 @click.group()
 @click.pass_context
@@ -90,10 +92,22 @@ def _crawler_dispatch(cfg, name):
 @click.pass_context
 def crawler_start(ctx, name):
     cfg = ctx.obj['cfg']
+    dt = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%d")
+    requests.post(cfg['manager']['url']+'/worker/start',
+                headers={'Authorization': f"Bearer {cfg['manager']['token']}"},
+                json={'dt': dt, 'name': f"{name}-{cfg['env']}"})
     _crawler_dispatch(cfg, name)
     worker_driver = get_driver(cfg, name)
     for num in range(cfg['moosejaw']['concurrency']):
         worker_driver.launch(['python', 'jetrag/cli.py', 'worker', 'start', name])
+
+@click.command('launch')
+@click.argument('name')
+@click.pass_context
+def crawler_launch(ctx, name):
+    cfg = ctx.obj['cfg']
+    worker_driver = get_driver(cfg, name)
+    worker_driver.launch(['python', 'jetrag/cli.py', 'worker', 'start', name])
 
 @click.group()
 def worker():
@@ -111,7 +125,7 @@ def worker_start(ctx, name):
     html_store = get_html_store(cfg)
     notifier = get_notifier(cfg)
     crawler = get_crawler(name, crawler_cfg, crawler_queue, html_store, cfg['db']['sqlalchemy'], notifier)
-    w = Worker(cfg['worker'], crawler, worker_driver, notifier)
+    w = Worker(cfg, crawler, worker_driver, notifier)
     w.start()
 
 # cli subcommands
@@ -121,6 +135,7 @@ cli.add_command(crawler)
 # crawler subcommands
 crawler.add_command(crawler_dispatch)
 crawler.add_command(crawler_start)
+crawler.add_command(crawler_launch)
 crawler.add_command(crawler_test)
 
 # worker subcommands

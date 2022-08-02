@@ -22,13 +22,22 @@ class MoosejawLoader:
         self.connect_args['rds_data_client'] = self.boto_client
         self.engine = create_engine(
             cfg['conn_str']+'/moosejaw', 
-            connect_args=self.connect_args)
+            connect_args=self.connect_args,
+            echo=False)
         self.session = Session(self.engine)
         self.raw_store = raw_store
         self.dt = dt
 
     def get(self):
         return self.raw_store.list(f'moosejaw/{self.dt}')
+
+    def cleanup(self, before_dt):
+        logger.info(f"cleanup before {before_dt}")
+        tables = [Item, Category, Photo, Size, ProductSpecification]
+        for table in tables:
+            res = self.session.query(table).filter(table.edited < before_dt).delete(synchronize_session=False)
+            print(res)
+        self.session.commit()
 
     def gen_item_id(self, item_code, color):
         return uuid.uuid3(

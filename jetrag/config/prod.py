@@ -2,9 +2,13 @@ import os
 
 cfg = {
     'env': 'dev',
+    'manager': {
+        'url': '',
+        'token': os.getenv("JETRAG_MANAGER_TOKEN", '')
+    },
     'queue': {
         'type': 'sqs',
-        'name_template': 'jetrag3-sqs-%s'
+        'name_template': 'jetrag3-sqs-{}'
     },
     'worker': {},
     'driver': {
