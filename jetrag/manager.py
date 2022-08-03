@@ -83,6 +83,11 @@ def worker_done():
     db.update(Key={"pk": f"DONE#{name}#{dt}"}, AttributeUpdates=attr_updates)
     return jsonify(item)
 
+@app.route("/login", methods=['GET', 'POST'])
+def login():
+    if request.method == 'GET':
+        return render_template("login.html")
+
 @app.route("/")
 def home():
     app.logger.info("home")
