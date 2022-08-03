@@ -10,39 +10,42 @@ from models.moosejaw import *
 
 logger = logging.getLogger(__name__)
 
+
 class MoosejawLoader:
     def __init__(self, cfg, raw_store, dt):
         self.boto_client = boto3.client(
-            'rds-data', 
-            aws_access_key_id=cfg['aws_access_key_id'], 
-            aws_secret_access_key=cfg['aws_secret_access_key'], 
-            region_name='ap-northeast-1'
+            "rds-data",
+            aws_access_key_id=cfg["aws_access_key_id"],
+            aws_secret_access_key=cfg["aws_secret_access_key"],
+            region_name="ap-northeast-1",
         )
-        self.connect_args = cfg['connect_args']
-        self.connect_args['rds_data_client'] = self.boto_client
+        self.connect_args = cfg["connect_args"]
+        self.connect_args["rds_data_client"] = self.boto_client
         self.engine = create_engine(
-            cfg['conn_str']+'/moosejaw', 
-            connect_args=self.connect_args,
-            echo=False)
+            cfg["conn_str"] + "/moosejaw", connect_args=self.connect_args, echo=False
+        )
         self.session = Session(self.engine)
         self.raw_store = raw_store
         self.dt = dt
 
     def get(self):
-        return self.raw_store.list(f'moosejaw/{self.dt}')
+        return self.raw_store.list(f"moosejaw/{self.dt}")
 
     def cleanup(self, before_dt):
         logger.info(f"cleanup before {before_dt}")
         tables = [Item, Category, Photo, Size, ProductSpecification]
         for table in tables:
-            res = self.session.query(table).filter(table.edited < before_dt).delete(synchronize_session=False)
+            res = (
+                self.session.query(table)
+                .filter(table.edited < before_dt)
+                .delete(synchronize_session=False)
+            )
             print(res)
         self.session.commit()
 
     def gen_item_id(self, item_code, color):
         return uuid.uuid3(
-            uuid.UUID("850aeee8-e173-4da1-9d6b-dd06e4b06747"),
-            f"{item_code}{color}"
+            uuid.UUID("850aeee8-e173-4da1-9d6b-dd06e4b06747"), f"{item_code}{color}"
         ).hex[:17]
 
     def load_update(self, variants):
@@ -53,17 +56,17 @@ class MoosejawLoader:
          'item_no': '6772822',
          'category': ['Womens Outerwear',
                       'Womens Jackets',
-                      'Womens Insulated Jackets', 
+                      'Womens Insulated Jackets',
                       'Womens Down Jackets'],
          'item_url': 'https://www.moosejaw.com/product/rab-women-s-cubit-stretch-down-hoody_10537936',
-        'item_name': "Rab Women's Cubit Stretch Down Hoody", 
-        'item_code': '10537936', 
-        'price': '299.95', 
-        'item_photo': ['https://s7d1.scene7.com/is/image/MoosejawMB/10537936x1087290_zm?$product1000$', 
-                       'https://s7d1.scene7.com/is/image/MoosejawMB/10537936x1085886_vAlt4?$product700$', 
-                       'https://s7d1.scene7.com/is/image/MoosejawMB/10537936x1085886_vAlt1?$product700$', 
-                       'https://s7d1.scene7.com/is/image/MoosejawMB/10537936x1085886_vAlt2?$product700$', 
-                       'https://s7d1.scene7.com/is/image/MoosejawMB/10537936x1085886_vAlt3?$product700$'], 
+        'item_name': "Rab Women's Cubit Stretch Down Hoody",
+        'item_code': '10537936',
+        'price': '299.95',
+        'item_photo': ['https://s7d1.scene7.com/is/image/MoosejawMB/10537936x1087290_zm?$product1000$',
+                       'https://s7d1.scene7.com/is/image/MoosejawMB/10537936x1085886_vAlt4?$product700$',
+                       'https://s7d1.scene7.com/is/image/MoosejawMB/10537936x1085886_vAlt1?$product700$',
+                       'https://s7d1.scene7.com/is/image/MoosejawMB/10537936x1085886_vAlt2?$product700$',
+                       'https://s7d1.scene7.com/is/image/MoosejawMB/10537936x1085886_vAlt3?$product700$'],
         'product_specifications': '{"Fit Type:": "Slim Fit", "Sleeve Length:": "Long Sleeve"}'}
 
         :param product: list of all variants
@@ -71,8 +74,8 @@ class MoosejawLoader:
         """
         seen_product_id = {}
         for variant in variants:
-            product_color = variant['color'].lower()
-            product_id = self.gen_item_id(variant['item_code'], product_color)
+            product_color = variant["color"].lower()
+            product_id = self.gen_item_id(variant["item_code"], product_color)
             if product_id in seen_product_id:
                 continue
             seen_product_id[product_id] = 1
@@ -81,125 +84,117 @@ class MoosejawLoader:
 
             # Item
             item = Item(
-                        id=product_id,
-                        item_code=variant['item_code'],
-                        item_name=variant['item_name'],
-                        item_url=variant['item_url'],
-                        color=product_color
-                    )
+                id=product_id,
+                brand=variant["brand"],
+                item_code=variant["item_code"],
+                item_name=variant["item_name"],
+                item_url=variant["item_url"],
+                color=product_color,
+            )
             self.session.add(item)
             try:
                 self.session.flush()
             except Exception as e:
-                if 'Duplicate' in str(e):
+                if "Duplicate" in str(e):
                     self.session.rollback()
-                    self.session.query(Item).filter(Item.id == product_id).update({
-                        'item_name': variant['item_name'],
-                        'item_url': variant['item_url'],
-                        'edited': datetime.datetime.now(datetime.timezone.utc)
-                    }, synchronize_session=False)
+                    self.session.query(Item).filter(Item.id == product_id).update(
+                        {
+                            "item_name": variant["item_name"],
+                            "item_url": variant["item_url"],
+                            "edited": datetime.datetime.now(datetime.timezone.utc),
+                        },
+                        synchronize_session=False,
+                    )
                 else:
                     raise e
             self.session.commit()
 
             # ProductSpecification
-            db_product_spec = self.session.query(
-                ProductSpecification
-            ).filter(
-                ProductSpecification.item_id == product_id
-            ).all()
+            db_product_spec = (
+                self.session.query(ProductSpecification)
+                .filter(ProductSpecification.item_id == product_id)
+                .all()
+            )
             if db_product_spec:
                 # update
-                self.session.query(
-                    ProductSpecification
-                ).filter(
+                self.session.query(ProductSpecification).filter(
                     ProductSpecification.item_id == product_id
-                ).update({
-                    'value': variant['product_specifications'],
-                    'edited': datetime.datetime.now(datetime.timezone.utc)
-                })
+                ).update(
+                    {
+                        "value": variant["product_specifications"],
+                        "edited": datetime.datetime.now(datetime.timezone.utc),
+                    }
+                )
             else:
                 # add
                 ps = ProductSpecification(
-                    item_id=product_id,
-                    value=variant['product_specifications']
+                    item_id=product_id, value=variant["product_specifications"]
                 )
-                self.session.add(ps)  
+                self.session.add(ps)
             self.session.commit()
-            
+
             # Category
-            db_category = self.session.query(Category.value).filter(Category.item_id == product_id).all()
+            db_category = (
+                self.session.query(Category.value)
+                .filter(Category.item_id == product_id)
+                .all()
+            )
             if db_category:
                 db_category = [x[0] for x in db_category]
-            for category in variant['category']:
-                if category not in db_category:    
-                    c = Category(
-                        item_id=product_id,
-                        value=category
-                    )
+            for category in variant["category"]:
+                if category not in db_category:
+                    c = Category(item_id=product_id, value=category)
                     self.session.add(c)
                 else:
-                    self.session.query(
-                        Category
-                    ).filter(
-                        Category.item_id == product_id,
-                        Category.value == category
-                    ).update({
-                        'edited': datetime.datetime.now(datetime.timezone.utc)
-                    })
+                    self.session.query(Category).filter(
+                        Category.item_id == product_id, Category.value == category
+                    ).update({"edited": datetime.datetime.now(datetime.timezone.utc)})
                 self.session.commit()
 
             # Photo
-            db_photo = self.session.query(Photo.url).filter(Photo.item_id == product_id).all()
+            db_photo = (
+                self.session.query(Photo.url).filter(Photo.item_id == product_id).all()
+            )
             if db_photo:
                 db_photo = [x[0] for x in db_photo]
-            for photo in variant['item_photo']:
-                if photo not in db_photo:    
-                    p = Photo(
-                        item_id=product_id,
-                        url=photo
-                    )
+            for photo in variant["item_photo"]:
+                if photo not in db_photo:
+                    p = Photo(item_id=product_id, url=photo)
                     self.session.add(p)
                 else:
-                    self.session.query(
-                        Photo
-                    ).filter(
-                        Photo.item_id == product_id,
-                        Photo.url == photo
-                    ).update({
-                        'edited': datetime.datetime.now(datetime.timezone.utc)
-                    })
+                    self.session.query(Photo).filter(
+                        Photo.item_id == product_id, Photo.url == photo
+                    ).update({"edited": datetime.datetime.now(datetime.timezone.utc)})
                 self.session.commit()
 
             # Size
-            size = variant['size'].lower()
+            size = variant["size"].lower()
             s = Size(
                 item_id=product_id,
                 size=size,
-                item_no=variant['item_no'],
-                price=variant['price']
+                item_no=variant["item_no"],
+                price=variant["price"],
             )
             self.session.add(s)
             try:
                 self.session.flush()
             except Exception as e:
-                if 'Duplicate' in str(e):
+                if "Duplicate" in str(e):
                     self.session.rollback()
-                    self.session.query(
-                        Size
-                    ).filter(
-                        Size.item_id == product_id,
-                        Size.size == size
-                    ).update({
-                        'size': size,
-                        'item_no': variant['item_no'],
-                        'price': variant['price'],
-                        'edited': datetime.datetime.now(datetime.timezone.utc)
-                    }, synchronize_session=False)
+                    self.session.query(Size).filter(
+                        Size.item_id == product_id, Size.size == size
+                    ).update(
+                        {
+                            "size": size,
+                            "item_no": variant["item_no"],
+                            "price": variant["price"],
+                            "edited": datetime.datetime.now(datetime.timezone.utc),
+                        },
+                        synchronize_session=False,
+                    )
                 else:
                     raise e
             self.session.commit()
-
 
     def load(self, products_list):
         done = {}
@@ -207,19 +202,19 @@ class MoosejawLoader:
         for products in products_list:
             seen_size = {}
             for product in products:
-                product_color = product['color'].lower()
+                product_color = product["color"].lower()
                 product_id = uuid.uuid3(
                     uuid.UUID("850aeee8-e173-4da1-9d6b-dd06e4b06747"),
-                    f"{product['item_code']}{product_color}"
+                    f"{product['item_code']}{product_color}",
                 ).hex[:17]
                 if not product_id in done:
                     done[product_id] = 1
                     item = Item(
                         id=product_id,
-                        item_code=product['item_code'],
-                        item_name=product['item_name'],
-                        item_url=product['item_url'],
-                        color=product_color
+                        item_code=product["item_code"],
+                        item_name=product["item_name"],
+                        item_url=product["item_url"],
+                        color=product_color,
                     )
                     try:
                         self.session.add(item)
@@ -229,23 +224,16 @@ class MoosejawLoader:
                         logger.error(f"{e}")
                         for row in to_insert:
                             logger.error(row.__dict__)
-                        raise(e)
+                        raise (e)
                     product_spec = ProductSpecification(
-                        item_id=product_id,
-                        value=product['product_specifications']
+                        item_id=product_id, value=product["product_specifications"]
                     )
                     to_insert.append(product_spec)
-                    for category in product['category']:
-                        c = Category(
-                            item_id=product_id,
-                            value=category
-                        )
+                    for category in product["category"]:
+                        c = Category(item_id=product_id, value=category)
                         to_insert.append(c)
-                    for photo in product['item_photo']:
-                        p = Photo(
-                            item_id=product_id,
-                            url=photo
-                        )
+                    for photo in product["item_photo"]:
+                        p = Photo(item_id=product_id, url=photo)
                         to_insert.append(p)
                 k = f"{product_id}_{product['size']}"
                 if k in seen_size:
@@ -255,9 +243,9 @@ class MoosejawLoader:
                     seen_size[k] = 1
                 s = Size(
                     item_id=product_id,
-                    size=product['size'],
-                    item_no=product['item_no'],
-                    price=product['price']
+                    size=product["size"],
+                    item_no=product["item_no"],
+                    price=product["price"],
                 )
                 to_insert.append(s)
         logger.info(f"add_all {len(to_insert)}")
@@ -269,4 +257,4 @@ class MoosejawLoader:
             logger.error(f"{e}")
             for row in to_insert:
                 logger.error(row.__dict__)
-            raise(e)
+            raise (e)

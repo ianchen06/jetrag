@@ -16,6 +16,7 @@ class Item(Base):
 
     id = Column(String(17), primary_key=True)
     item_code = Column(INTEGER(11), nullable=False)
+    brand = Column(String(32), nullable=False, server_default=text("''"))
     item_name = Column(String(256), nullable=False)
     item_url = Column(String(512), nullable=False)
     color = Column(String(50), nullable=False)
