@@ -4,3 +4,4 @@ venv
 .vscode
 .chalice/deployments/
 .chalice/venv/
+*.env

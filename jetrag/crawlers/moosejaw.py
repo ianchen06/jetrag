@@ -111,6 +111,11 @@ class Moosejaw:
         data = self.parser.parse(res.text)
         self.store_db(data)
 
+    def get_html_from_html_store(self, filename):
+        html = self.html_store.get(filename)
+        data = self.parser.parse(html)
+        self.store_db(data)
+
     def store_html(self, data):
         self.html_store.put(f'moosejaw/{self.dt}', data)
 

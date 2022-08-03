@@ -1,16 +1,18 @@
 import os
 
 cfg = {
-    'env': 'dev',
+    'env': 'prod',
     'manager': {
-        'url': '',
+        'url': 'https://7l2topnpfj.execute-api.ap-northeast-1.amazonaws.com/dev',
         'token': os.getenv("JETRAG_MANAGER_TOKEN", '')
     },
     'queue': {
         'type': 'sqs',
         'name_template': 'jetrag3-sqs-{}'
     },
-    'worker': {},
+    'worker': {
+        'restart': False
+    },
     'driver': {
         'type': 'ecs',
         'ecs': {

@@ -10,7 +10,9 @@ cfg = {
         'type': 'sqs',
         'name_template': 'jetrag3-crawler-sqs-dev'
     },
-    'worker': {},
+    'worker': {
+        'restart': False
+    },
     'driver': {
         'type': 'ecs',
         'ecs': {

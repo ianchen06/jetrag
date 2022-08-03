@@ -39,6 +39,7 @@ custom:
     packRequirements: false
 functions:
   app:
+    timeout: 20
     handler: wsgi_handler.handler
     events:
       - http: ANY /

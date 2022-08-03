@@ -98,25 +98,33 @@ class MoosejawLoader:
                         'item_url': variant['item_url'],
                         'edited': datetime.datetime.now(datetime.timezone.utc)
                     }, synchronize_session=False)
+                else:
+                    raise e
             self.session.commit()
 
             # ProductSpecification
-            product_spec = ProductSpecification(
-                item_id=product_id,
-                value=variant['product_specifications']
-            )
-            self.session.add(product_spec)
-            try:
-                self.session.flush()
-            except Exception as e:
-                if 'Duplicate' in str(e):
-                    self.session.query(ProductSpecification).filter(
-                        ProductSpecification.item_id == product_id
-                    ).update({
-                        'item_id': product_id,
-                        'value': variant['product_specifications'],
-                        'edited': datetime.datetime.now(datetime.timezone.utc)
-                    }, synchronize_session=False)
+            db_product_spec = self.session.query(
+                ProductSpecification
+            ).filter(
+                ProductSpecification.item_id == product_id
+            ).all()
+            if db_product_spec:
+                # update
+                self.session.query(
+                    ProductSpecification
+                ).filter(
+                    ProductSpecification.item_id == product_id
+                ).update({
+                    'value': variant['product_specifications'],
+                    'edited': datetime.datetime.now(datetime.timezone.utc)
+                })
+            else:
+                # add
+                ps = ProductSpecification(
+                    item_id=product_id,
+                    value=variant['product_specifications']
+                )
+                self.session.add(ps)  
             self.session.commit()
             
             # Category
@@ -164,11 +172,11 @@ class MoosejawLoader:
                 self.session.commit()
 
             # Size
-            size = variant['item_no'].lower()
+            size = variant['size'].lower()
             s = Size(
                 item_id=product_id,
-                size=variant['size'],
-                item_no=size,
+                size=size,
+                item_no=variant['item_no'],
                 price=variant['price']
             )
             self.session.add(s)
@@ -188,6 +196,8 @@ class MoosejawLoader:
                         'price': variant['price'],
                         'edited': datetime.datetime.now(datetime.timezone.utc)
                     }, synchronize_session=False)
+                else:
+                    raise e
             self.session.commit()
 
 

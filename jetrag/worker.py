@@ -23,8 +23,9 @@ class Worker:
         logger.info('exiting...')
     
     def restart(self):
-        logger.info("restarting...")
-        self.driver.launch()
+        if self.cfg['worker']['restart']:
+            logger.info("restarting...")
+            self.driver.launch()
         sys.exit(1)
 
     def handle_alarm_signal(self, signum, frame):
