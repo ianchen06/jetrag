@@ -1,13 +1,15 @@
 # https://www.serverless.com/blog/flask-python-rest-api-serverless-lambda-dynamodb
 service: jetrag3-manager
- 
+
 provider:
   name: aws
   runtime: python3.9
   region: ap-northeast-1
   memorySize: 128
   environment:
+    JETRAG_ENV: ${env:JETRAG_ENV}
     SLACK_WEBHOOK_URL: ${env:SLACK_WEBHOOK_URL}
+    INFO_SLACK_WEBHOOK_URL: ${env:INFO_SLACK_WEBHOOK_URL}
     RDS_AWS_SECRET_ACCESS_KEY: ${env:RDS_AWS_SECRET_ACCESS_KEY}
     RDS_AWS_ACCESS_KEY_ID: ${env:RDS_AWS_ACCESS_KEY_ID}
   iam:
@@ -33,20 +35,20 @@ custom:
     slim: true
     slimPatternsAppendDefaults: false
     slimPatterns:
-      - 'donotremove'
+      - "donotremove"
   wsgi:
     app: jetrag/manager.app
     packRequirements: false
 functions:
   app:
-    timeout: 20
+    timeout: 30
     handler: wsgi_handler.handler
     events:
       - http: ANY /
-      - http: 'ANY /{proxy+}'
+      - http: "ANY /{proxy+}"
 package:
   patterns:
-    - '!node_modules/**'
-    - '!__pycache__/**'
-    - '!.git/**'
-    - '!venv/**'
+    - "!node_modules/**"
+    - "!__pycache__/**"
+    - "!.git/**"
+    - "!venv/**"

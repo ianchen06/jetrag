@@ -42,7 +42,7 @@ def worker_start():
         }
     }
     db.update(Key={"pk": f"DONE#{name}#{dt}"}, AttributeUpdates=attr_updates)
-    notifier.send({'text': f"{name} start"})
+    notifier.send_info({'text': f"{name} start"})
     return jsonify({})
 
 @app.route("/worker/done", methods=["POST"])
@@ -63,17 +63,18 @@ def worker_done():
     item = res.get("Item")
     if item:
         start_dt = item.get("start_dt", 0)
+        app.logger.info(f"start_dt is {start_dt}")
         end_dt = item.get("end_dt", 0)
         dt_diff = now - end_dt
         app.logger.info(dt_diff)
         if dt_diff > 600:
             app.logger.info(datetime.datetime.fromtimestamp(end_dt))
-            loader = loader_class(cfg['db']['sqlalchemy'], '', dt)
-            before_dt = datetime.datetime.fromtimestamp(start_dt)
+            loader = loader_class(cfg['db']['sqlalchemy'], '', dt, True)
+            before_dt = datetime.datetime.fromtimestamp(start_dt).strftime('%Y-%m-%d 00:00:00')
             app.logger.info(f"cleanup before {before_dt}")
             print("before cleanup")
             loader.cleanup(before_dt)
-            notifier.send({'text': f"{name} done"})
+            notifier.send_info({'text': f"{name} done"})
     attr_updates = {
         'end_dt': {
             'Value': now,

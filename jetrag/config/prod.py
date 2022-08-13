@@ -3,7 +3,7 @@ import os
 cfg = {
     'env': 'prod',
     'manager': {
-        'url': 'https://7l2topnpfj.execute-api.ap-northeast-1.amazonaws.com/dev',
+        'url': 'https://6g6kf0c2x8.execute-api.ap-northeast-1.amazonaws.com/prod',
         'token': os.getenv("JETRAG_MANAGER_TOKEN", '')
     },
     'queue': {
@@ -28,6 +28,7 @@ cfg = {
     'notifications': {
         'type': 'slack',
         'slack': {
+            'info_webhook_url': os.getenv('INFO_SLACK_WEBHOOK_URL'),
             'webhook_url': os.getenv('SLACK_WEBHOOK_URL')
         }
     },

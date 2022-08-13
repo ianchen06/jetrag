@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 
 class MoosejawLoader:
-    def __init__(self, cfg, raw_store, dt):
+    def __init__(self, cfg, raw_store, dt, debug=False):
         self.boto_client = boto3.client(
             "rds-data",
             aws_access_key_id=cfg["aws_access_key_id"],
@@ -22,7 +22,7 @@ class MoosejawLoader:
         self.connect_args = cfg["connect_args"]
         self.connect_args["rds_data_client"] = self.boto_client
         self.engine = create_engine(
-            cfg["conn_str"] + "/moosejaw", connect_args=self.connect_args, echo=False
+            cfg["conn_str"] + "/moosejaw", connect_args=self.connect_args, echo=debug
         )
         self.session = Session(self.engine)
         self.raw_store = raw_store
@@ -41,7 +41,7 @@ class MoosejawLoader:
                 .delete(synchronize_session=False)
             )
             print(res)
-        self.session.commit()
+            self.session.commit()
 
     def gen_item_id(self, item_code, color):
         return uuid.uuid3(
@@ -100,6 +100,7 @@ class MoosejawLoader:
                     self.session.query(Item).filter(Item.id == product_id).update(
                         {
                             "item_name": variant["item_name"],
+                            "brand": variant["brand"],
                             "item_url": variant["item_url"],
                             "edited": datetime.datetime.now(datetime.timezone.utc),
                         },

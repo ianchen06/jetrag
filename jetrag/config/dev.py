@@ -28,6 +28,7 @@ cfg = {
     'notifications': {
         'type': 'slack',
         'slack': {
+            'info_webhook_url': os.getenv('INFO_SLACK_WEBHOOK_URL'), 
             'webhook_url': os.getenv('SLACK_WEBHOOK_URL')
         }
     },
@@ -52,6 +53,13 @@ cfg = {
     },
     'test': {},
     'moosejaw': {
+        'notifications': {
+            'type': 'slack',
+            'slack': {
+                'webhook_url': '',
+                'info_webhook_url': '',
+            }
+        },
         'concurrency': 5,
         'base_url': 'https://moosejaw.com',
         'headers': {
