@@ -6,6 +6,8 @@ import logging
 
 from flask import Flask, jsonify, request, make_response, render_template
 from yaml import load
+from boto3.dynamodb.conditions import Attr
+from botocore.exceptions import ClientError
 
 from db.dynamodb import Dynamodb
 from notification.slack import SlackNotifier
@@ -39,6 +41,10 @@ def worker_start():
         'start_dt': {
             'Value': now,
             'Action': 'PUT'
+        },
+        'end_dt': {
+            'Value': 0,
+            'Action': 'PUT'
         }
     }
     db.update(Key={"pk": f"DONE#{name}#{dt}"}, AttributeUpdates=attr_updates)
@@ -68,6 +74,19 @@ def worker_done():
         dt_diff = now - end_dt
         app.logger.info(dt_diff)
         if dt_diff > 600:
+            try:
+                db.update(Key={"pk": f"DONE#{name}#{dt}"},
+                    UpdateExpression="set end_at = :r",
+                    ExpressionAttributeValues={
+                        ':r': now
+                    },
+                    ConditionExpression=Attr("end_dt").eq(0))
+            except ClientError as err:
+                if err.response["Error"]["Code"] == 'ConditionalCheckFailedException':
+                    # Somebody changed the item in the db while we were changing it!
+                    raise ValueError("end_dt updated since read, retry!") from err
+                else:
+                    raise err
             app.logger.info(datetime.datetime.fromtimestamp(end_dt))
             loader = loader_class(cfg['db']['sqlalchemy'], '', dt, True)
             before_dt = datetime.datetime.fromtimestamp(start_dt).strftime('%Y-%m-%d 00:00:00')
@@ -75,13 +94,7 @@ def worker_done():
             print("before cleanup")
             loader.cleanup(before_dt)
             notifier.send_info({'text': f"{name} done"})
-    attr_updates = {
-        'end_dt': {
-            'Value': now,
-            'Action': 'PUT'
-        }
-    }
-    db.update(Key={"pk": f"DONE#{name}#{dt}"}, AttributeUpdates=attr_updates)
+
     return jsonify(item)
 
 @app.route("/login", methods=['GET', 'POST'])
