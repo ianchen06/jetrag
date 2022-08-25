@@ -4,4 +4,6 @@ def get_config(env):
         from .dev import cfg
     if env == 'prod':
         from .prod import cfg
+    if env == 'test':
+        from .test import cfg
     return cfg

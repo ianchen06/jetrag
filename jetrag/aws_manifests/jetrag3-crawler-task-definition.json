@@ -2,7 +2,7 @@
   "containerDefinitions": [
     {
       "name": "jetrag3",
-      "image": "068993006585.dkr.ecr.ap-northeast-1.amazonaws.com/jetrag3-crawler:1660047424",
+      "image": "068993006585.dkr.ecr.ap-northeast-1.amazonaws.com/jetrag3-crawler:1660865837",
       "cpu": 0,
       "portMappings": [],
       "essential": true,
