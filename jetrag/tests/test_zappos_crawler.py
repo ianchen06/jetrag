@@ -3,6 +3,7 @@ import logging
 import json
 
 from crawlers.zappos import Zappos
+from parsers.zappos import ZapposParser
 from q.mock import FakeQueue
 from db.mocks3 import FakeS3Store
 from notification.mock import FakeNotifier
@@ -50,6 +51,17 @@ class TestZappos(unittest.TestCase):
         )
         p.get_product('https://www.zappos.com/product/9836826')
 
+    def test_parse_standard(self):
+        html = open('./tests/html/zappos/standard.html').read()
+        p = ZapposParser()
+        res = p.parse(html)
+        print(f"res: {res}")
+
+    def test_parse_thestyleroom(self):
+        html = open('./tests/html/zappos/thestyleroom.html').read()
+        p = ZapposParser()
+        res = p.parse(html)
+        print(f"res: {res}")
 
 if __name__ == "__main__":
     unittest.main()

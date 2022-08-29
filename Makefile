@@ -10,7 +10,7 @@ register:
 	aws ecs register-task-definition --cli-input-json fileb://jetrag/aws_manifests/jetrag3-crawler-task-definition.json
 
 model-gen:
-	sqlacodegen --noviews --noconstraints --noindexes --outfile ./jetrag/models/moosejaw.py 'mysql+auroradataapi://:@/moosejaw?aurora_cluster_arn=arn:aws:rds:ap-northeast-1:068993006585:cluster:jetrag3&secret_arn=arn:aws:secretsmanager:ap-northeast-1:068993006585:secret:rds-db-credentials/cluster-YXGYNX2ORLFS6RYDNGEBFTMHHA/jetrag-PvBX2f'
+	sqlacodegen --noviews --noconstraints --noindexes --outfile ./jetrag/models/zappos.py 'mysql+auroradataapi://:@/zappos?aurora_cluster_arn=arn:aws:rds:ap-northeast-1:068993006585:cluster:jetrag3&secret_arn=arn:aws:secretsmanager:ap-northeast-1:068993006585:secret:rds-db-credentials/cluster-YXGYNX2ORLFS6RYDNGEBFTMHHA/jetrag-PvBX2f'
 
 .PHONY: login build model-gen
 
