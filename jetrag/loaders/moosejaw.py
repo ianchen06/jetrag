@@ -72,13 +72,9 @@ class MoosejawLoader:
         :param product: list of all variants
         :type product: list
         """
-        seen_product_id = {}
         for variant in variants:
             product_color = variant["color"].lower()
             product_id = self.gen_item_id(variant["item_code"], product_color)
-            if product_id in seen_product_id:
-                continue
-            seen_product_id[product_id] = 1
 
             # insert Item, ProductSpecification, Category, Photo
 
