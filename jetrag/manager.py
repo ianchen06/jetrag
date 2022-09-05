@@ -76,7 +76,7 @@ def worker_done():
         if dt_diff > 600:
             try:
                 db.update(Key={"pk": f"DONE#{name}#{dt}"},
-                    UpdateExpression="set end_at = :r",
+                    UpdateExpression="set end_dt = :r",
                     ExpressionAttributeValues={
                         ':r': now
                     },
