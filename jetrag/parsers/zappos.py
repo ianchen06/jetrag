@@ -49,7 +49,7 @@ class ZapposParser:
         basic_info['category'] = [product['category'], product['subCategory']]
         basic_info['gender'] = product['gender']
         info_list = [self.clean_product_spec(e) for e in page_data['product']['detail']['description']['bulletPoints']]
-        basic_info["product specifications"] = info_list            
+        basic_info["product_specifications"] = info_list            
         
         for color_item in page_data['product']['detail']['styles']:
             item = {}
@@ -98,7 +98,7 @@ class ZapposParser:
                     break
                 else:
                     description_list.append(self.clean_product_spec(x))
-        basic_info['product specifications'] = description_list
+        basic_info['product_specifications'] = description_list
 
         ### stock info ###
         for color_item in target_json['styles']:

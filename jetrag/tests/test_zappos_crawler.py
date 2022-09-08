@@ -3,6 +3,7 @@ import logging
 import json
 
 from crawlers.zappos import Zappos
+from loaders.zappos import ZapposLoader
 from parsers.zappos import ZapposParser
 from q.mock import FakeQueue
 from db.mocks3 import FakeS3Store
@@ -62,6 +63,16 @@ class TestZappos(unittest.TestCase):
         p = ZapposParser()
         res = p.parse(html)
         print(f"res: {res}")
+
+    def test_loader(self):
+        html = open('./tests/html/zappos/thestyleroom.html').read()
+        p = ZapposParser()
+        res = p.parse(html)
+
+        cfg = get_config("test")
+        sql_cfg = cfg['db']['sqlalchemy']
+        loader = ZapposLoader(sql_cfg, '', '20220830', True)
+        loader.load_update(res)
 
 if __name__ == "__main__":
     unittest.main()
