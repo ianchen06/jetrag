@@ -29,6 +29,12 @@ class EcsDriver(Driver):
                     }
                 ]
             },
+            tags=[
+                {
+                    'key': 'crawler',
+                    'value': self.name
+                }
+            ],
             networkConfiguration={
                 'awsvpcConfiguration': {
                     'subnets': [

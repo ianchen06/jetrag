@@ -72,8 +72,8 @@ class Zappos:
         if 'Access Denied' in res.text:
             raise Exception("blocked")
         self.store_html({'url': url, 'html': res.text})
-        #data = self.parser.parse(res.text)
-        #self.store_db(data)
+        data = self.parser.parse(res.text)
+        self.store_db(data)
 
     def get_html_from_html_store(self, filename):
         html = self.html_store.get(filename)

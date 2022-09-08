@@ -13,13 +13,13 @@ from db.dynamodb import Dynamodb
 from notification.slack import SlackNotifier
 from config import get_config
 from loaders.moosejaw import MoosejawLoader
+from loaders.zappos import ZapposLoader
 
 app = Flask(__name__, template_folder='./manager/templates')
 app.logger.setLevel(logging.INFO)
 cfg = get_config(os.getenv("JETRAG_ENV", "dev"))
 db = Dynamodb("jetrag3")
 notifier = SlackNotifier(cfg['notifications']['slack'])
-valid_crawler_names = ['moosejaw']
 
 def auth_required(f):
     @wraps(f)
@@ -54,28 +54,30 @@ def worker_start():
 @app.route("/worker/done", methods=["POST"])
 @auth_required
 def worker_done():
-    app.logger.info("worker_done")
     now = int(time.time())
     data = request.get_json()
-    app.logger.info("got json")
     dt = data["dt"]
-    name = data['name']
-    app.logger.info("before load")
+    name_env = data['name']
+    name = name_env.split("-")[0]
+
+    loader_class_map = {
+        'moosejaw': MoosejawLoader,
+        'zappos': ZapposLoader,
+    }
     
-    loader_class = MoosejawLoader
+    loader_class = loader_class_map.get(name, "")
+    if not loader_class:
+        raise Exception(f"loader_class not found for name {name}")
     
-    app.logger.info("after load, before db get")
-    res = db.get(f"DONE#{name}#{dt}")
+    res = db.get(f"DONE#{name_env}#{dt}")
     item = res.get("Item")
     if item:
         start_dt = item.get("start_dt", 0)
-        app.logger.info(f"start_dt is {start_dt}")
         end_dt = item.get("end_dt", 0)
         dt_diff = now - end_dt
-        app.logger.info(dt_diff)
         if dt_diff > 600:
             try:
-                db.update(Key={"pk": f"DONE#{name}#{dt}"},
+                db.update(Key={"pk": f"DONE#{name_env}#{dt}"},
                     UpdateExpression="set end_dt = :r",
                     ExpressionAttributeValues={
                         ':r': now
@@ -87,13 +89,10 @@ def worker_done():
                     raise ValueError("end_dt updated since read, retry!") from err
                 else:
                     raise err
-            app.logger.info(datetime.datetime.fromtimestamp(end_dt))
             loader = loader_class(cfg['db']['sqlalchemy'], '', dt, True)
             before_dt = datetime.datetime.fromtimestamp(start_dt).strftime('%Y-%m-%d 00:00:00')
-            app.logger.info(f"cleanup before {before_dt}")
-            print("before cleanup")
             loader.cleanup(before_dt)
-            notifier.send_info({'text': f"{name} done"})
+            notifier.send_info({'text': f"{name_env} done"})
 
     return jsonify(item)
 
