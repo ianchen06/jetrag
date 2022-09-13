@@ -1,4 +1,4 @@
-import uuid
+import hashlib
 import logging
 import datetime
 
@@ -52,9 +52,10 @@ class ZapposLoader:
             self.session.commit()
 
     def gen_item_id(self, item_code, color):
-        return uuid.uuid3(
-            uuid.UUID("850aeee8-e173-4da1-9d6b-dd06e4b06747"), f"{item_code}{color}"
-        ).hex[:17]
+        input_ = f"{item_code}_{color}".encode('utf-8')
+        hash_func = hashlib.shake_256()
+        hash_func.update(input_)
+        return hash_func.hexdigest(8)
 
     def load_update(self, products):
         for product in products:
