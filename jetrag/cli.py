@@ -83,7 +83,7 @@ def crawler_dispatch(ctx, name):
 def _crawler_dispatch(cfg, name):
     crawler_queue = get_queue(cfg, name)
     crawler_cfg = cfg[name]
-    notifier = get_notifier(cfg)
+    notifier = get_notifier(crawler_cfg)
     crawler = get_crawler(name, crawler_cfg, crawler_queue, '', cfg['db']['sqlalchemy'], notifier)
     crawler.dispatch()
 
@@ -123,10 +123,20 @@ def worker_start(ctx, name):
     crawler_queue = get_queue(cfg, name)
     crawler_cfg = cfg[name]
     html_store = get_html_store(cfg)
-    notifier = get_notifier(cfg)
+    notifier = get_notifier(crawler_cfg)
     crawler = get_crawler(name, crawler_cfg, crawler_queue, html_store, cfg['db']['sqlalchemy'], notifier)
     w = Worker(cfg, crawler, worker_driver, notifier)
     w.start()
+
+def get_debug_crawler(name):
+    cfg = get_cfg(os.getenv("JETRAG_ENV", 'dev'))
+    worker_driver = get_driver(cfg, name)
+    crawler_queue = get_queue(cfg, name)
+    crawler_cfg = cfg[name]
+    html_store = get_html_store(cfg)
+    notifier = get_notifier(crawler_cfg)
+    crawler = get_crawler(name, crawler_cfg, crawler_queue, html_store, cfg['db']['sqlalchemy'], notifier)
+    return crawler
 
 # cli subcommands
 cli.add_command(worker)

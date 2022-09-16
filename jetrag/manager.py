@@ -19,7 +19,6 @@ app = Flask(__name__, template_folder='./manager/templates')
 app.logger.setLevel(logging.INFO)
 cfg = get_config(os.getenv("JETRAG_ENV", "dev"))
 db = Dynamodb("jetrag3")
-notifier = SlackNotifier(cfg['notifications']['slack'])
 
 def auth_required(f):
     @wraps(f)
@@ -36,7 +35,8 @@ def worker_start():
     now = int(time.time())
     data = request.get_json()
     dt = data["dt"]
-    name = data['name']
+    name_env = data['name']
+    name = name_env.split("-")[0]
     attr_updates = {
         'start_dt': {
             'Value': now,
@@ -47,8 +47,10 @@ def worker_start():
             'Action': 'PUT'
         }
     }
-    db.update(Key={"pk": f"DONE#{name}#{dt}"}, AttributeUpdates=attr_updates)
-    notifier.send_info({'text': f"{name} start"})
+    db.update(Key={"pk": f"DONE#{name_env}#{dt}"}, AttributeUpdates=attr_updates)
+    crawler_cfg = cfg[name]
+    notifier = SlackNotifier(crawler_cfg['notifications']['slack'])
+    notifier.send_info({'text': f"{name_env} start"})
     return jsonify({})
 
 @app.route("/worker/done", methods=["POST"])
@@ -92,6 +94,8 @@ def worker_done():
             loader = loader_class(cfg['db']['sqlalchemy'], '', dt, True)
             before_dt = datetime.datetime.fromtimestamp(start_dt).strftime('%Y-%m-%d 00:00:00')
             loader.cleanup(before_dt)
+            crawler_cfg = cfg[name]
+            notifier = SlackNotifier(crawler_cfg['notifications']['slack'])
             notifier.send_info({'text': f"{name_env} done"})
 
     return jsonify(item)

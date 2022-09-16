@@ -56,11 +56,11 @@ cfg = {
         'notifications': {
             'type': 'slack',
             'slack': {
-                'webhook_url': '',
-                'info_webhook_url': '',
+                'webhook_url': os.getenv('SLACK_WEBHOOK_URL'),
+                'info_webhook_url': os.getenv('ZAPPOS_INFO_SLACK_WEBHOOK_URL'),
             }
         },
-        'concurrency': 5,
+        'concurrency': 20,
         'base_url': 'https://www.zappos.com',
         'headers': {
             'authority': 'www.zappos.com',
@@ -77,11 +77,11 @@ cfg = {
         'notifications': {
             'type': 'slack',
             'slack': {
-                'webhook_url': '',
-                'info_webhook_url': '',
+                'webhook_url': os.getenv('SLACK_WEBHOOK_URL'),
+                'info_webhook_url': os.getenv('MOOSEJAW_INFO_SLACK_WEBHOOK_URL'),
             }
         },
-        'concurrency': 5,
+        'concurrency': 20,
         'base_url': 'https://moosejaw.com',
         'headers': {
                 'Connection': 'keep-alive',
