@@ -1,6 +1,7 @@
 import hashlib
 import logging
 import datetime
+import time
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
@@ -60,6 +61,8 @@ class ZapposLoader:
     def load_update(self, products):
         for product in products:
             product_id = self.gen_item_id(product['zappos_id'], product['color'])
+
+            t1 = time.time()
             item = Item(
                 id=product_id,
                 model=product['zappos_id'],
@@ -89,8 +92,11 @@ class ZapposLoader:
                 else:
                     raise e
             self.session.commit()
+            t2 = time.time()
+            print(f"item done: took {t2 - t1}s")
 
             # Photo
+            t1 = time.time()
             db_photo = (
                 self.session.query(Photo.url)
                 .filter(Photo.item_id == product_id)
@@ -106,10 +112,14 @@ class ZapposLoader:
                 else:
                     self.session.query(Photo).filter(
                         Photo.item_id == product_id, Photo.url == photo
-                    ).update({"edited": datetime.datetime.now(datetime.timezone.utc)})
+                    ).update({"edited": datetime.datetime.now(datetime.timezone.utc)},
+                    synchronize_session=False)
                 self.session.commit()
+            t2 = time.time()
+            print(f"photo done: took {t2 - t1}s")
 
             # WidthSize
+            t1 = time.time()
             db_width_size = (
                 self.session.query(WidthSize.size)
                 .all()
@@ -123,17 +133,22 @@ class ZapposLoader:
                 else:
                     self.session.query(WidthSize).filter(
                         WidthSize.size == width
-                    ).update({"edited": datetime.datetime.now(datetime.timezone.utc)})
+                    ).update({"edited": datetime.datetime.now(datetime.timezone.utc)},
+                    synchronize_session=False)
                 self.session.commit()
+            t2 = time.time()
+            print(f"width_size done: took {t2 - t1}s")
 
             # Width
+            t1 = time.time()
             db_width_size = (
                 self.session.query(WidthSize.id, WidthSize.size)
                 .all()
             )
             if db_width_size:
+                # size : id
                 db_width_size = {x[1]:x[0] for x in db_width_size}
-
+ 
             db_width = (
                 self.session
                 .query(Width.id, WidthSize.id, WidthSize.size)
@@ -149,11 +164,15 @@ class ZapposLoader:
                     self.session.execute(insert_sql)
                 else:
                     self.session.query(Width).filter(
-                        Width.id == record[0][1] 
-                    ).update({"edited": datetime.datetime.now(datetime.timezone.utc)})
+                        Width.id == record[0][0] 
+                    ).update({"edited": datetime.datetime.now(datetime.timezone.utc)},
+                    synchronize_session=False)
                 self.session.commit()
+            t2 = time.time()
+            print(f"width done: took {t2 - t1}s")
 
             # Size
+            t1 = time.time()
             db_width = (
                 self.session
                 .query(Width.id, WidthSize.size)
@@ -162,37 +181,48 @@ class ZapposLoader:
                 .all()
             )
             if db_width:
+                #  size : width id
                 db_width_dict = {x[1]:x[0] for x in db_width}
+            t2 = time.time()
+            print(f"size: db_width read done: took {t2 - t1}s")
             
+            t1 = time.time()
             db_size = (
                 self.session
-                .query(Size.asin, Width.id)
+                .query(Size.id, Size.size, Width.id)
                 .filter(Size.width_id == Width.id)
                 .filter(Width.item_id == product_id)
                 .all()
             )
+            t2 = time.time()
+            print(f"size: db_size read done {len(db_size)} rows: took {t2 - t1}s")
 
+            t1 = time.time()
             for width, info in product['width'].items():
                 width_id = db_width_dict[width]
                 for size in info['price'].keys():
                     asin = info['asin'][size]
                     onhand = info['onhand'][size]
                     price = self.nb_str_processing(info['price'][size])
-                    print(f"asin: {asin}, db_size: {[x[0] for x in db_size]}")
-                    if not asin in [x[0] for x in db_size]:
+                    size = self.remove_error_chars(size)
+
+                    record = [x for x in db_size if x[1] == size]
+                    if not record:
                         insert_sql = f'''INSERT INTO zappos.size (width_id, size, price, onhand, asin) 
-                        VALUES ({width_id}, "{self.remove_error_chars(size)}", {price}, {onhand}, "{asin}");'''
+                        VALUES ({width_id}, "{size}", {price}, {onhand}, "{asin}");'''
                         self.session.execute(insert_sql)
                     else:
                         self.session.query(Size).filter(
-                            (Size.asin == asin)
+                            Size.id == record[0][0]
                         ).update({
                             "asin": asin,
                             "price": price,
                             "onhand": onhand,
                             "edited": datetime.datetime.now(datetime.timezone.utc)
-                        })
+                        }, synchronize_session=False)
                     self.session.commit()
+            t2 = time.time()
+            print(f"size done: took {t2 - t1}s")
 
             # Category
             db_category = (
@@ -209,7 +239,8 @@ class ZapposLoader:
                 else:
                     self.session.query(Category).filter(
                         Category.item_id == product_id, Category.value == category
-                    ).update({"edited": datetime.datetime.now(datetime.timezone.utc)})
+                    ).update({"edited": datetime.datetime.now(datetime.timezone.utc)},
+                    synchronize_session=False)
                 self.session.commit()
 
             # ProductSpecification
@@ -226,7 +257,8 @@ class ZapposLoader:
                     {
                         "value": product["product_specifications"],
                         "edited": datetime.datetime.now(datetime.timezone.utc),
-                    }
+                    },
+                    synchronize_session=False
                 )
             else:
                 # add
