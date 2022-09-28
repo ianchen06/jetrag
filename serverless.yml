@@ -4,7 +4,7 @@ service: jetrag3-manager
 provider:
   name: aws
   runtime: python3.9
-  region: ap-northeast-1
+  region: us-east-2
   memorySize: 128
   environment:
     JETRAG_ENV: ${env:JETRAG_ENV}

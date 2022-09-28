@@ -2,14 +2,14 @@
   "containerDefinitions": [
     {
       "name": "jetrag3",
-      "image": "068993006585.dkr.ecr.us-east-2.amazonaws.com/jetrag3-crawler:1664357769",
+      "image": "068993006585.dkr.ecr.us-east-2.amazonaws.com/jetrag3-crawler:latest",
       "cpu": 0,
       "portMappings": [],
       "essential": true,
       "environment": [
         {
           "name": "JETRAG_ENV",
-          "value": "dev"
+          "value": "prod"
         }
       ],
       "mountPoints": [],
@@ -17,28 +17,28 @@
       "secrets": [
         {
           "name": "RDS_AWS_ACCESS_KEY_ID",
-          "valueFrom": "/ecs/jetrag3-crawler-dev/rds_aws_access_key_id"
+          "valueFrom": "/ecs/jetrag3-crawler/rds_aws_access_key_id"
         },
         {
           "name": "RDS_AWS_SECRET_ACCESS_KEY",
-          "valueFrom": "/ecs/jetrag3-crawler-dev/rds_aws_secret_access_key"
+          "valueFrom": "/ecs/jetrag3-crawler/rds_aws_secret_access_key"
         },
         {
           "name": "SLACK_WEBHOOK_URL",
-          "valueFrom": "/ecs/jetrag3-crawler-dev/slack_webhook_url"
+          "valueFrom": "/ecs/jetrag3-crawler/slack_webhook_url"
         }
       ],
       "logConfiguration": {
         "logDriver": "awslogs",
         "options": {
-          "awslogs-group": "/ecs/jetrag3-crawler-dev",
+          "awslogs-group": "/ecs/jetrag3-crawler",
           "awslogs-region": "us-east-2",
           "awslogs-stream-prefix": "ecs"
         }
       }
     }
   ],
-  "family": "jetrag3-crawler-dev",
+  "family": "jetrag3-crawler",
   "taskRoleArn": "arn:aws:iam::068993006585:role/jetrag3-IAM-Role-ECS",
   "executionRoleArn": "arn:aws:iam::068993006585:role/ecsTaskExecutionRole",
   "networkMode": "awsvpc",

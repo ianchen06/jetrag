@@ -18,7 +18,7 @@ class ZapposLoader:
             "rds-data",
             aws_access_key_id=cfg["aws_access_key_id"],
             aws_secret_access_key=cfg["aws_secret_access_key"],
-            region_name="ap-northeast-1",
+            region_name="us-east-2",
         )
         self.connect_args = cfg["connect_args"]
         self.connect_args["rds_data_client"] = self.boto_client

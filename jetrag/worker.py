@@ -34,7 +34,8 @@ class Worker:
         dt = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%d")
         requests.post(self.cfg['manager']['url']+'/worker/done',
                     headers={'Authorization': f"Bearer {self.cfg['manager']['token']}"},
-                    json={'dt': dt, 'name': f"{self.crawler.name}-{self.cfg['env']}"})
+                    json={'dt': dt, 'name': f"{self.crawler.name}-{self.cfg['env']}"},
+                    timeout=3.0)
         sys.exit(1)
 
     def handle_error(self, tb):

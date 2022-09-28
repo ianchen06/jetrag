@@ -3,7 +3,7 @@ import os
 cfg = {
     'env': 'prod',
     'manager': {
-        'url': 'https://6g6kf0c2x8.execute-api.ap-northeast-1.amazonaws.com/prod',
+        'url': 'https://ilq0yrlv3h.execute-api.us-east-2.amazonaws.com/prod',
         'token': os.getenv("JETRAG_MANAGER_TOKEN", '')
     },
     'queue': {
@@ -21,8 +21,8 @@ cfg = {
             'count': 1,
             'task_definition': 'jetrag3-crawler',
             'task_role_arn': 'arn:aws:iam::068993006585:role/jetrag3-crawler-ecs-task-role',
-            'subnet_id': 'subnet-0d8af4bf75baa139e',
-            'security_group': 'sg-0f326cd91a4b8cfbf'
+            'subnet_id': 'subnet-00d159d3664c3377f',
+            'security_group': 'sg-0f4df8482baf1b9a2'
         }
     },
     'notifications': {
@@ -46,8 +46,8 @@ cfg = {
             'aws_access_key_id': os.getenv("RDS_AWS_ACCESS_KEY_ID"),
             'aws_secret_access_key': os.getenv("RDS_AWS_SECRET_ACCESS_KEY"),
             'connect_args': {
-                'aurora_cluster_arn': 'arn:aws:rds:ap-northeast-1:179980757190:cluster:jetrag-en-db',
-                'secret_arn': 'arn:aws:secretsmanager:ap-northeast-1:179980757190:secret:rds-db-credentials/cluster-LCOGPYN4KMRUKNKL24EDFTGZKE/jetrag-j0paFO',
+                'aurora_cluster_arn': 'arn:aws:rds:us-east-2:179980757190:cluster:jetrag-en-db',
+                'secret_arn': 'arn:aws:secretsmanager:us-east-2:179980757190:secret:rds-db-credentials/cluster-MLDS6Q2BJJEEX7TEXYUPSMTFQQ/jetrag/1664351437462-jm0Tep',
             }
         }
     },
