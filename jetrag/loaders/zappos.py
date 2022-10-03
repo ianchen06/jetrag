@@ -49,7 +49,6 @@ class ZapposLoader:
                 .filter(table.edited < before_dt)
                 .delete(synchronize_session=False)
             )
-            print(res)
             self.session.commit()
 
     def gen_item_id(self, item_code, color):
@@ -93,7 +92,7 @@ class ZapposLoader:
                     raise e
             self.session.commit()
             t2 = time.time()
-            print(f"item done: took {t2 - t1}s")
+            logger.debug(f"item done: took {t2 - t1}s")
 
             # Photo
             t1 = time.time()
@@ -114,9 +113,15 @@ class ZapposLoader:
                         Photo.item_id == product_id, Photo.url == photo
                     ).update({"edited": datetime.datetime.now(datetime.timezone.utc)},
                     synchronize_session=False)
-                self.session.commit()
+                try:
+                    self.session.commit()
+                except Exception as e:
+                    # TODO: remove in future after debug
+                    if 'ER_DUP_ENTRY' in str(e):
+                        logger.info(product_id, photo, db_photo)
+                        raise Exception(f"{product_id}, {photo}, {db_photo}") from e
             t2 = time.time()
-            print(f"photo done: took {t2 - t1}s")
+            logger.debug(f"photo done: took {t2 - t1}s")
 
             # WidthSize
             t1 = time.time()
@@ -137,7 +142,7 @@ class ZapposLoader:
                     synchronize_session=False)
                 self.session.commit()
             t2 = time.time()
-            print(f"width_size done: took {t2 - t1}s")
+            logger.debug(f"width_size done: took {t2 - t1}s")
 
             # Width
             t1 = time.time()
@@ -169,7 +174,7 @@ class ZapposLoader:
                     synchronize_session=False)
                 self.session.commit()
             t2 = time.time()
-            print(f"width done: took {t2 - t1}s")
+            logger.debug(f"width done: took {t2 - t1}s")
 
             # Size
             t1 = time.time()
@@ -184,7 +189,7 @@ class ZapposLoader:
                 #  size : width id
                 db_width_dict = {x[1]:x[0] for x in db_width}
             t2 = time.time()
-            print(f"size: db_width read done: took {t2 - t1}s")
+            logger.debug(f"size: db_width read done: took {t2 - t1}s")
             
             t1 = time.time()
             db_size = (
@@ -195,7 +200,7 @@ class ZapposLoader:
                 .all()
             )
             t2 = time.time()
-            print(f"size: db_size read done {len(db_size)} rows: took {t2 - t1}s")
+            logger.debug(f"size: db_size read done {len(db_size)} rows: took {t2 - t1}s")
 
             t1 = time.time()
             for width, info in product['width'].items():
@@ -222,7 +227,7 @@ class ZapposLoader:
                         }, synchronize_session=False)
                     self.session.commit()
             t2 = time.time()
-            print(f"size done: took {t2 - t1}s")
+            logger.debug(f"size done: took {t2 - t1}s")
 
             # Category
             db_category = (
@@ -233,6 +238,9 @@ class ZapposLoader:
             if db_category:
                 db_category = [x[0] for x in db_category]
             for category in product["category"]:
+                # Sometimes category is None
+                if not category:
+                    continue
                 if category not in db_category:
                     c = Category(item_id=product_id, value=category)
                     self.session.add(c)

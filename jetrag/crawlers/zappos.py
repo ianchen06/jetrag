@@ -69,13 +69,19 @@ class Zappos:
         """
 
         res = self.__get_page(url)
+        self.store_html({'url': url, 'html': res.text})
         if 'Access Denied' in res.text:
             raise Exception("blocked")
-        self.store_html({'url': url, 'html': res.text})
+        if "SORRY! We can't seem to find the page you're looking for" in res.text:
+            return    
         try:
             data = self.parser.parse(res.text)
         except Exception as e:
-            raise Exception(f"error parsing {url}") from e
+            if "Invalid product page" in str(e):
+                return
+            else:
+                raise Exception(f"error parsing {url}") from e
+
         try:
             self.store_db(data)
         except Exception as e:

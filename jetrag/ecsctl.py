@@ -15,5 +15,5 @@ for task in res['tasks']:
         if kv['key'] == 'crawler':
             if kv['value'] == sys.argv[1]:
                 print(task['taskArn'], task['tags'])
-                #client.stop_task(cluster='jetrag3-cluster', task=task['taskArn'])
+                client.stop_task(cluster='jetrag3-cluster', task=task['taskArn'])
     

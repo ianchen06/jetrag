@@ -25,14 +25,17 @@ class ZapposParser:
         item_url = re.findall(r'<link rel="canonical" href="(.+?)"', html)[0]
         standard = re.findall('<script>window.__INITIAL_STATE__ = (.+?);</script>', html)
         thestyleroom = re.findall('window.tsr.data = (.+?});', html)
-        if standard:
-            standard_data = json.loads(standard[0])
-            data.extend(self.parse_standard(standard_data))
-        if thestyleroom:
-            thestyleroom_data = json.loads(thestyleroom[0])
-            data.extend(self.parse_thestyleroom(thestyleroom_data))
-        if not data:
-            raise Exception("invalid store type")
+        try:
+            if standard:
+                standard_data = json.loads(standard[0])
+                data.extend(self.parse_standard(standard_data))
+            if thestyleroom:
+                thestyleroom_data = json.loads(thestyleroom[0])
+                data.extend(self.parse_thestyleroom(thestyleroom_data))
+            if not data:
+                raise Exception("invalid store type")
+        except Exception as e:
+            raise Exception(f"error parsing {item_url}") from e
 
         for row in data:
             row['item_url'] = item_url
@@ -42,13 +45,18 @@ class ZapposParser:
         json_array = []  # final output [{one color item}, {}...]
         basic_info = {}
 
+        if 'product' not in page_data['pixelServer']['data']:
+            raise Exception("Invalid product page")
         product = page_data['pixelServer']['data']['product']
         basic_info['zappos_id'] = product['sku']
         basic_info['brand'] = product['brand']
         basic_info['item_name'] = f"{product['brand']} {product['name']}"
         basic_info['category'] = [product['category'], product['subCategory']]
         basic_info['gender'] = product['gender']
-        info_list = [self.clean_product_spec(e) for e in page_data['product']['detail']['description']['bulletPoints']]
+        info_list = []
+        # Sometimes description is ''
+        if page_data['product']['detail']['description']:
+            info_list = [self.clean_product_spec(e) for e in page_data['product']['detail']['description']['bulletPoints']]
         basic_info["product_specifications"] = info_list            
         
         for color_item in page_data['product']['detail']['styles']:

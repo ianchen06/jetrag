@@ -102,18 +102,14 @@ class Moosejaw:
         """
 
         res = self.__get_page(url)
-        print("after getpage")
         if "We're so sorry, but our Fancy Site Protection" in res.text:
             raise Exception("blocked")
         if not 'add2CartBtn' in res.text:
             self.store_html({'url': url+'_invalid', 'html': res.text})
             raise Exception("invalid product page")
         self.store_html({'url': url, 'html': res.text})
-        print("after store_html")
         data = self.parser.parse(res.text)
-        print("after parse")
         self.store_db(data)
-        print("after store_db")
         return url
 
     def get_html_from_html_store(self, filename):

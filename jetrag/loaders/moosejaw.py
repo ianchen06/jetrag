@@ -40,7 +40,6 @@ class MoosejawLoader:
                 .filter(table.edited < before_dt)
                 .delete(synchronize_session=False)
             )
-            print(res)
             self.session.commit()
 
     def gen_item_id(self, item_code, color):
@@ -105,7 +104,6 @@ class MoosejawLoader:
                 else:
                     raise e
             self.session.commit()
-            print("item done")
 
             # ProductSpecification
             db_product_spec = (
@@ -130,7 +128,6 @@ class MoosejawLoader:
                 )
                 self.session.add(ps)
             self.session.commit()
-            print("product spec done")
 
             # Category
             db_category = (
@@ -149,7 +146,6 @@ class MoosejawLoader:
                         Category.item_id == product_id, Category.value == category
                     ).update({"edited": datetime.datetime.now(datetime.timezone.utc)})
                 self.session.commit()
-            print("category done")
 
             # Photo
             db_photo = (
@@ -166,7 +162,6 @@ class MoosejawLoader:
                         Photo.item_id == product_id, Photo.url == photo
                     ).update({"edited": datetime.datetime.now(datetime.timezone.utc)})
                 self.session.commit()
-            print("photo done")
 
             # Size
             size = variant["size"].lower()
@@ -196,7 +191,6 @@ class MoosejawLoader:
                 else:
                     raise e
             self.session.commit()
-            print("size done")
 
     def load(self, products_list):
         done = {}

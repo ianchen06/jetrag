@@ -75,4 +75,4 @@ class Worker:
                 self.start_shutdown_timer()
             except Exception as e:
                 tb = traceback.format_exc()
-                self.handle_error(f"{tb}\n{e}")
+                self.handle_error(f"{tb}\n{e}\n{msg}")
