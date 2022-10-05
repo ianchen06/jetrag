@@ -34,12 +34,7 @@ class Moosejaw:
         headers = copy.deepcopy(clean_headers)
         ua = headers['User-Agent'].replace('88.0', f'88.{random.randint(0,100)}')
         headers['User-Agent'] = ua
-        # for x in range(random.randint(1, 10)):
-        #     headers[f"{random.randint(0, 100)}"] = f'{random.randint(0, 100)}'
-        headers['referer'] = "https://www.moosejaw.com/promo/dogood?promoCode=DOGOOD&cm_sp=Home-Page-_-Slider1-_-Cotopaxi-GWP"
-        logger.info(headers)
         return requests.request('GET', url, headers=headers)
-        #return self.http.request_with_random_ua('GET', url, headers=headers)
 
     def dispatch(self):
         logger.info('dispatching job')
