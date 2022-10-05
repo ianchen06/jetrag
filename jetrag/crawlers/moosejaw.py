@@ -6,6 +6,7 @@ import copy
 import random
 
 from bs4 import BeautifulSoup
+import requests
 
 from http_client import HTTPDriver
 from parsers.moosejaw import MoosejawParser
@@ -33,11 +34,12 @@ class Moosejaw:
         headers = copy.deepcopy(clean_headers)
         ua = headers['User-Agent'].replace('88.0', f'88.{random.randint(0,100)}')
         headers['User-Agent'] = ua
-        for x in range(random.randint(1, 10)):
-            headers[f"{random.randint(0, 100)}"] = f'{random.randint(0, 100)}'
-        logger.debug(headers)
-        #return requests.request('GET', url, headers=headers)
-        return self.http.request_with_random_ua('GET', url, headers=headers)
+        # for x in range(random.randint(1, 10)):
+        #     headers[f"{random.randint(0, 100)}"] = f'{random.randint(0, 100)}'
+        headers['referer'] = "https://www.moosejaw.com/promo/dogood?promoCode=DOGOOD&cm_sp=Home-Page-_-Slider1-_-Cotopaxi-GWP"
+        logger.info(headers)
+        return requests.request('GET', url, headers=headers)
+        #return self.http.request_with_random_ua('GET', url, headers=headers)
 
     def dispatch(self):
         logger.info('dispatching job')
@@ -50,8 +52,10 @@ class Moosejaw:
         :rtype: list
         """
         res = self.__get_page(self.base_url)
+        print(res.text)
         soup = BeautifulSoup(res.text, 'html.parser')
         navigation = [self.base_url+x for x in re.findall(r'href="(/navigation.+?)"', res.text)]
+        print(navigation)
         more = [self.base_url+x['href'] for x in soup.select('#DrawerActivity a.list-menu-title')]
         result = set(navigation + more)
         for url in result:
