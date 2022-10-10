@@ -8,6 +8,7 @@ class FakeQueue:
         return '', ''
 
     def put(self, msg):
+        print(f"[fakequeue] recv: {msg}")
         return self.q.append(msg)
 
     def done(self, receipt_handle):

@@ -20,7 +20,6 @@ class MoosejawParser:
         self.db.get()
 
     def parse(self, html):
-        product_data = []
         soup = BeautifulSoup(html, "lxml")
         general_imgs = set(
             re.findall(
@@ -28,10 +27,12 @@ class MoosejawParser:
                 html,
             )
         )
-        product_specification = {}
+        product_specification = []
         for row in soup.select(".pdp-specifications tr"):
             aux = row.find_all("td")
-            product_specification[aux[0].string.strip()] = aux[1].string.strip()
+            k = aux[0].string.strip().replace(":", "")
+            v = aux[1].string.strip()
+            product_specification.append(f"{k}: {v}")
         scripts = soup.find_all("script", {"type": "application/ld+json"})
         data = json.loads(scripts[0].text)
         category = [x["name"] for x in data["itemListElement"]]
@@ -40,7 +41,7 @@ class MoosejawParser:
         except json.decoder.JSONDecodeError as e:
             logger.error(f"{e}: {scripts[1]}")
             return []
-        seen_color_size = {}
+        res = {}
         for row in data["hasVariant"]:
             try:
                 is_outofstock = (
@@ -48,29 +49,27 @@ class MoosejawParser:
                 )
                 if is_outofstock:
                     continue
-                res = {}
-                res["brand"] = re.findall('var manufacturerName = "(.+?)";', html)[0]
-                res["color"] = row.get("color", "None")
-                res["size"] = row.get("size", "None")
-                res["item_no"] = row["sku"]
-
-                c_key = f"{res['color'].lower()}_{res['size'].lower()}"
-                # skip already seen color+size
-                if c_key in seen_color_size:
-                    continue
-                seen_color_size[c_key] = 1
-
-                res["category"] = category
-                res["item_url"] = data["url"]
-                res["item_name"] = data["name"]
-                res["item_code"] = res["item_url"].split("_")[1]
-                res["price"] = (
+                
+                color = row.get("color", "None")
+                if color not in res:
+                    res[color] = {'size': []}         
+                    res[color]["brand"] = re.findall('var manufacturerName = "(.+?)";', html)[0]
+                    res[color]["color"] = color
+                    res[color]["item_url"] = data["url"]
+                    res[color]["item_code"] = data["url"].split("_")[1]
+                    res[color]["item_photo"] = [row["image"]] + list(general_imgs)
+                    res[color]["product_specifications"] = product_specification
+                    res[color]["category"] = category
+                    res[color]["item_name"] = data["name"]
+                    
+                size = {}
+                size["item_no"] = row["sku"]
+                size["size"] = row.get("size", "None")
+                size["price"] = (
                     0 if not row["offers"]["price"] else row["offers"]["price"]
                 )
-                res["item_photo"] = [row["image"]] + list(general_imgs)
-                res["product_specifications"] = json.dumps(product_specification)
-                product_data.append(res)
+                res[color]['size'].append(size)
             except Exception as e:
                 logger.error(f"{e}: {data}")
                 raise (e)
-        return product_data
+        return [x for x in res.values()]

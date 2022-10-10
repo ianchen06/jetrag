@@ -8,7 +8,7 @@ cfg = {
     },
     'queue': {
         'type': 'sqs',
-        'name_template': 'jetrag3-crawler-sqs-dev'
+        'name_template': 'jetrag3-sqs-dev'
     },
     'worker': {
         'restart': True
@@ -60,7 +60,7 @@ cfg = {
                 'info_webhook_url': os.getenv('ZAPPOS_INFO_SLACK_WEBHOOK_URL'),
             }
         },
-        'concurrency': 20,
+        'concurrency': 1,
         'base_url': 'https://www.zappos.com',
         'headers': {
             'authority': 'www.zappos.com',
@@ -73,6 +73,19 @@ cfg = {
             'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.14; rv:88.0) Gecko/20100101 Firefox/88.0',
         }
     },
+    'backcountry': {
+        'notifications': {
+            'type': 'slack',
+            'slack': {
+                'webhook_url': os.getenv('SLACK_WEBHOOK_URL'),
+                'info_webhook_url': os.getenv('BACKCOUNTRY_INFO_SLACK_WEBHOOK_URL'),
+            }
+        },
+        'concurrency': 1,
+        'base_url': 'https://www.backcountry.com',
+        'headers': {
+        },
+    },
     'moosejaw': {
         'notifications': {
             'type': 'slack',
@@ -81,16 +94,16 @@ cfg = {
                 'info_webhook_url': os.getenv('MOOSEJAW_INFO_SLACK_WEBHOOK_URL'),
             }
         },
-        'concurrency': 20,
+        'concurrency': 1,
         'base_url': 'https://moosejaw.com',
         'headers': {
-                'Connection': 'keep-alive',
-                'Upgrade-Insecure-Requests': '1',
-                'Host': 'www.moosejaw.com',
-                'TE': 'Trailers',
-                'Accept-Language': 'ja,en-US;q=0.7,en;q=0.3',
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-                'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.14; rv:88.0) Gecko/20100101 Firefox/88.0',
+            'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9',
+            'accept-encoding': 'gzip, deflate, br',
+            'accept-language': 'en-US,en;q=0.9',
+            'pragma': 'no-cache',
+            'referer': "https://www.moosejaw.com/",
+            "upgrade-insecure-requests": "1",
+            'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/105.0.0.0 Safari/537.36',
         },
     }
 }

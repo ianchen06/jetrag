@@ -1,10 +1,15 @@
 import uuid
 import logging
 import datetime
+import hashlib
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 import boto3
+
+# For MySQL upsert
+from sqlalchemy import func
+from sqlalchemy.dialects.mysql import insert
 
 from models.moosejaw import *
 
@@ -42,10 +47,128 @@ class MoosejawLoader:
             )
             self.session.commit()
 
+    # TODO: refactor into common lib
+    def upsert(self, model, insert_dict):
+        """model can be a db.Model or a table(), insert_dict should contain a primary or unique key."""
+        inserted = insert(model).values(**insert_dict)
+        if 'id' in insert_dict:
+            upserted = inserted.on_duplicate_key_update(
+                **{k: inserted.inserted[k] for k, v in insert_dict.items()},
+                edited=datetime.datetime.now(datetime.timezone.utc),
+            )
+            res = self.session.execute(upserted)
+            return insert_dict['id']
+        
+        upserted = inserted.on_duplicate_key_update(
+            id=func.LAST_INSERT_ID(model.id),
+            **{k: inserted.inserted[k] for k, v in insert_dict.items()},
+            edited=datetime.datetime.now(datetime.timezone.utc),
+        )
+
+        res = self.session.execute(upserted)
+        return res.lastrowid
+
     def gen_item_id(self, item_code, color):
-        return uuid.uuid3(
-            uuid.UUID("850aeee8-e173-4da1-9d6b-dd06e4b06747"), f"{item_code}{color}"
-        ).hex[:17]
+        input_ = f"{item_code}_{color}".encode('utf-8')
+        hash_func = hashlib.shake_256()
+        hash_func.update(input_)
+        return hash_func.hexdigest(8)
+
+    def load_update_new(self, variants):
+        """load one product (all variants) into db
+
+        {
+            "size": [
+                {
+                    "item_no": "6773817",
+                    "size": "10",
+                    "price": "223.99"
+                },
+                {
+                    "item_no": "6773819",
+                    "size": "14",
+                    "price": "223.99"
+                }
+            ],
+            "brand": "Rab",
+            "color": "Bering Sea",
+            "item_url": "https://www.moosejaw.com/product/rab-women-s-cubit-stretch-down-hoody_10537936",
+            "item_code": "10537936",
+            "item_photo": [
+                "https://s7d1.scene7.com/is/image/MoosejawMB/10537936x1085886_zm?$product1000$",
+                "https://s7d1.scene7.com/is/image/MoosejawMB/10537936x1085886_vAlt4?$product700$",
+                "https://s7d1.scene7.com/is/image/MoosejawMB/10537936x1085886_vAlt3?$product700$",
+                "https://s7d1.scene7.com/is/image/MoosejawMB/10537936x1085886_vAlt1?$product700$",
+                "https://s7d1.scene7.com/is/image/MoosejawMB/10537936x1085886_vAlt2?$product700$"
+            ],
+            "product_specifications": [
+                "Features: Hood, Insulated, 4-Way Stretch, Water-resistant, Adjustable Drawcord Hem, Windproof, Zipper Garage",
+                "Weight: 17.1 oz",
+                "Back Length: 26.4 in.",
+                "Hood Type: Fixed",
+                "Fabric Weight: 3.78 oz / Square Yard",
+                "Windproof: Yes",
+                "Product Technology: Pertex Quantum, DWR",
+                "Disclaimer: We only ship this brand to US Addresses.",
+                "Gender: Womens",
+                "Best Use: Travel, Hiking",
+                "Fit Type: Slim Fit",
+                "Sleeve Length: Long Sleeve"
+            ],
+            "category": [
+                "Womens Outerwear",
+                "Womens Jackets",
+                "Womens Insulated Jackets",
+                "Womens Down Jackets"
+            ],
+            "item_name": "Rab Women's Cubit Stretch Down Hoody"
+        }
+
+        :param product: list of all variants
+        :type product: list
+        """
+        for variant in variants:
+            item_id = self.gen_item_id(variant["item_code"], variant["color"])
+
+            self.upsert(Item, dict(
+                id=item_id,
+                brand=variant["brand"],
+                item_code=variant["item_code"],
+                item_name=variant["item_name"],
+                item_url=variant["item_url"],
+                color=variant["color"],
+            ))
+            self.session.commit()
+
+            for category in variant["category"]:
+                self.upsert(Category, dict(
+                    item_id=item_id,
+                    value=category
+                ))
+            self.session.commit()
+
+            for photo in variant["item_photo"]:
+                self.upsert(Photo, dict(
+                    item_id=item_id,
+                    url=photo
+                ))
+            self.session.commit()
+
+            for row in variant['product_specifications']:
+                self.upsert(ProductSpecification, dict(
+                    item_id=item_id,
+                    value=row
+                ))
+            self.session.commit()
+
+            for row in variant["size"]:
+                self.upsert(Size, dict(
+                    item_id=item_id,
+                    size=row['size'],
+                    item_no=row["item_no"],
+                    price=row["price"],
+                ))
+                self.session.commit()
 
     def load_update(self, variants):
         """load one product (all variants) into db
@@ -72,19 +195,18 @@ class MoosejawLoader:
         :type product: list
         """
         for variant in variants:
-            product_color = variant["color"].lower()
-            product_id = self.gen_item_id(variant["item_code"], product_color)
+            item_id = self.gen_item_id(variant["item_code"], variant["color"])
 
             # insert Item, ProductSpecification, Category, Photo
 
             # Item
             item = Item(
-                id=product_id,
+                id=item_id,
                 brand=variant["brand"],
                 item_code=variant["item_code"],
                 item_name=variant["item_name"],
                 item_url=variant["item_url"],
-                color=product_color,
+                color=variant["color"],
             )
             self.session.add(item)
             try:
@@ -92,7 +214,7 @@ class MoosejawLoader:
             except Exception as e:
                 if "Duplicate" in str(e):
                     self.session.rollback()
-                    self.session.query(Item).filter(Item.id == product_id).update(
+                    self.session.query(Item).filter(Item.id == item_id).update(
                         {
                             "item_name": variant["item_name"],
                             "brand": variant["brand"],
@@ -108,13 +230,13 @@ class MoosejawLoader:
             # ProductSpecification
             db_product_spec = (
                 self.session.query(ProductSpecification)
-                .filter(ProductSpecification.item_id == product_id)
+                .filter(ProductSpecification.item_id == item_id)
                 .all()
             )
             if db_product_spec:
                 # update
                 self.session.query(ProductSpecification).filter(
-                    ProductSpecification.item_id == product_id
+                    ProductSpecification.item_id == item_id
                 ).update(
                     {
                         "value": variant["product_specifications"],
@@ -124,7 +246,7 @@ class MoosejawLoader:
             else:
                 # add
                 ps = ProductSpecification(
-                    item_id=product_id, value=variant["product_specifications"]
+                    item_id=item_id, value=variant["product_specifications"]
                 )
                 self.session.add(ps)
             self.session.commit()
@@ -132,65 +254,65 @@ class MoosejawLoader:
             # Category
             db_category = (
                 self.session.query(Category.value)
-                .filter(Category.item_id == product_id)
+                .filter(Category.item_id == item_id)
                 .all()
             )
             if db_category:
                 db_category = [x[0] for x in db_category]
             for category in variant["category"]:
                 if category not in db_category:
-                    c = Category(item_id=product_id, value=category)
+                    c = Category(item_id=item_id, value=category)
                     self.session.add(c)
                 else:
                     self.session.query(Category).filter(
-                        Category.item_id == product_id, Category.value == category
+                        Category.item_id == item_id, Category.value == category
                     ).update({"edited": datetime.datetime.now(datetime.timezone.utc)})
                 self.session.commit()
 
             # Photo
             db_photo = (
-                self.session.query(Photo.url).filter(Photo.item_id == product_id).all()
+                self.session.query(Photo.url).filter(Photo.item_id == item_id).all()
             )
             if db_photo:
                 db_photo = [x[0] for x in db_photo]
             for photo in variant["item_photo"]:
                 if photo not in db_photo:
-                    p = Photo(item_id=product_id, url=photo)
+                    p = Photo(item_id=item_id, url=photo)
                     self.session.add(p)
                 else:
                     self.session.query(Photo).filter(
-                        Photo.item_id == product_id, Photo.url == photo
+                        Photo.item_id == item_id, Photo.url == photo
                     ).update({"edited": datetime.datetime.now(datetime.timezone.utc)})
                 self.session.commit()
 
             # Size
-            size = variant["size"].lower()
-            s = Size(
-                item_id=product_id,
-                size=size,
-                item_no=variant["item_no"],
-                price=variant["price"],
-            )
-            self.session.add(s)
-            try:
-                self.session.flush()
-            except Exception as e:
-                if "Duplicate" in str(e):
-                    self.session.rollback()
-                    self.session.query(Size).filter(
-                        Size.item_id == product_id, Size.size == size
-                    ).update(
-                        {
-                            "size": size,
-                            "item_no": variant["item_no"],
-                            "price": variant["price"],
-                            "edited": datetime.datetime.now(datetime.timezone.utc),
-                        },
-                        synchronize_session=False,
-                    )
-                else:
-                    raise e
-            self.session.commit()
+            for row in variant['size']:
+                s = Size(
+                    item_id=item_id,
+                    size=row['size'],
+                    item_no=row["item_no"],
+                    price=row["price"],
+                )
+                self.session.add(s)
+                try:
+                    self.session.flush()
+                except Exception as e:
+                    if "Duplicate" in str(e):
+                        self.session.rollback()
+                        self.session.query(Size).filter(
+                            Size.item_id == item_id, Size.size == row['size']
+                        ).update(
+                            {
+                                "size": row['size'],
+                                "item_no": row["item_no"],
+                                "price": row["price"],
+                                "edited": datetime.datetime.now(datetime.timezone.utc),
+                            },
+                            synchronize_session=False,
+                        )
+                    else:
+                        raise e
+                self.session.commit()
 
     def load(self, products_list):
         done = {}

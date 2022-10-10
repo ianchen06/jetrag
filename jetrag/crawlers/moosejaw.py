@@ -23,18 +23,16 @@ class Moosejaw:
         self.html_store = html_store
         self.notifier = notifier
         self.dt = datetime.datetime.now().strftime("%Y%m%d")
-        self.http = HTTPDriver()
+        self.http = requests.session()
         self.headers = cfg['headers']
         self.parser = MoosejawParser()
         self.loader = MoosejawLoader(sql_alchemy_cfg, '', self.dt)
 
+        self.http.headers = self.headers
+
     def __get_page(self, url):
-        time.sleep(1)
-        clean_headers = self.headers
-        headers = copy.deepcopy(clean_headers)
-        ua = headers['User-Agent'].replace('88.0', f'88.{random.randint(0,100)}')
-        headers['User-Agent'] = ua
-        return requests.request('GET', url, headers=headers)
+        time.sleep(random.randint(3, 8))
+        return self.http.get(url)
 
     def dispatch(self):
         logger.info('dispatching job')
@@ -91,6 +89,7 @@ class Moosejaw:
         data = list(set(re.findall(r'(https://www.moosejaw.com/product/.+?)"', res.text)))
         for url in data:
             self.queue.put({'method': 'get_product', 'args': [url]})
+        return data
 
     def get_product(self, url):
         """Get product HTML from the product URL

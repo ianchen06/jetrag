@@ -2,7 +2,7 @@
   "containerDefinitions": [
     {
       "name": "jetrag3",
-      "image": "068993006585.dkr.ecr.us-east-2.amazonaws.com/jetrag3-crawler:1664420962",
+      "image": "068993006585.dkr.ecr.us-east-2.amazonaws.com/jetrag3-crawler:1665125527",
       "cpu": 0,
       "portMappings": [],
       "essential": true,
@@ -26,6 +26,10 @@
         {
           "name": "SLACK_WEBHOOK_URL",
           "valueFrom": "/ecs/jetrag3-crawler-dev/slack_webhook_url"
+        },
+        {
+          "name": "INFO_SLACK_WEBHOOK_URL",
+          "valueFrom": "/ecs/jetrag3-crawler-dev/info_slack_webhook_url"
         }
       ],
       "logConfiguration": {

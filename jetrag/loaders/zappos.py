@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 import boto3
 
 from models.zappos import *
+from loaders.base_loader import upsert
 
 logger = logging.getLogger(__name__)
 
@@ -56,6 +57,226 @@ class ZapposLoader:
         hash_func = hashlib.shake_256()
         hash_func.update(input_)
         return hash_func.hexdigest(8)
+
+    def load_update_new(self, products):
+        """
+        {
+            "zappos_id": "9515355",
+            "brand": "Brooks",
+            "item_name": "Brooks Ghost 14",
+            "category": [
+                "Shoes",
+                "Sneakers & Athletic Shoes"
+            ],
+            "gender": "women",
+            "product_specifications": [
+                "Treat yourself to a brand new ride this season. Elevate your running experience with the Brooks\u00ae Ghost 14 running shoes! These road runners offer a smooth-as-silk ride with a form-fitting interior that keeps your feet cushioned and secure even after miles on the road.",
+                "Predecessor: Ghost 13.",
+                "Support Type: Neutral.",
+                "Cushioning: High energizing cushioning.",
+                "Surface: Road.",
+                "Differential: 12mm.",
+                "Open-engineered air mesh upper with 3D Fit Print technology that provides strategic stretch and structure to the upper.",
+                "Traditional lace-up closure.",
+                "Plush tongue and collar.",
+                "Soft fabric lining for a great in-shoe feel.",
+                "Removable foam insole for excellent underfoot comfort and support.",
+                "DNA LOFT offers incredibly soft cushioning that now extends beyond the heel, allowing for an easy transition from landing to toe-off.",
+                "BioMoGo DNA is a blend of earth-friendly BioMoGo and responsive Brooks DNA, and has a gender-friendly cushioning design, making for a dynamic ride.",
+                "Flex grooves allow for more natural forefoot movement and fluidity.",
+                "Soft blown rubber forefoot material supplies light cushioning and grip.",
+                "APMA Approved: The American Podiatric Medical Association Seal of Acceptance is awarded to products that promote good foot health and are substantiated by a committee of discerning podiatrists by wear-testing and review of the application and supporting documentation. APMA Acceptance must be applied for and is not automatically available to styles that meet its criteria.",
+                "PDAC A5500 Approved: Pricing, Data Analysis and Coding A5500 Diabetic Medicare Coding is awarded to footwear that is available in three or more widths, with a removable insole (sock-liner). It allows individuals to pay for their footwear through their Medicare. PDAC must be applied for on a yearly basis and is not automatically available to styles that meet its criteria. For more specific info, visit the Medicare website or call 1-800-MEDICARE. ",
+                "Imported.",
+                "Product measurements were taken using size 9, width B - Medium. Please note that measurements may vary by size.",
+                "Weight of footwear is based on a single item, not a pair.",
+                "Measurements:     Weight: 9 oz    "
+            ],
+            "color": "Peacoat/Yucca/Navy",
+            "width": {
+                "d_-_wide": {
+                    "price": {
+                        "5.5": "109.95",
+                        "7": "109.95",
+                        "7.5": "109.95",
+                        "8": "109.95",
+                        "8.5": "109.95",
+                        "9": "109.95",
+                        "9.5": "109.95",
+                        "10": "109.95",
+                        "11": "109.95",
+                        "11.5": "109.95",
+                        "12": "109.95",
+                        "13": "109.95"
+                    },
+                    "onhand": {
+                        "5.5": "1",
+                        "7": "102",
+                        "7.5": "133",
+                        "8": "297",
+                        "8.5": "352",
+                        "9": "94",
+                        "9.5": "204",
+                        "10": "128",
+                        "11": "77",
+                        "11.5": "23",
+                        "12": "1",
+                        "13": "2"
+                    },
+                    "asin": {
+                        "5.5": "B08QVFZNLM",
+                        "7": "B08QTPZFPC",
+                        "7.5": "B08QVD1SKD",
+                        "8": "B08QTQW4ZZ",
+                        "8.5": "B08QVCLT1B",
+                        "9": "B08QV6VZJY",
+                        "9.5": "B08QV3MQ9D",
+                        "10": "B08QVNZDCJ",
+                        "11": "B08QVQZN7J",
+                        "11.5": "B08QV19S6B",
+                        "12": "B08QTNRWZ4",
+                        "13": "B094N78V6Q"
+                    }
+                },
+                "b_-_medium": {
+                    "price": {
+                        "6": "109.95",
+                        "6.5": "109.95",
+                        "7": "109.95",
+                        "7.5": "109.95",
+                        "8": "109.95",
+                        "8.5": "109.95",
+                        "9": "109.95",
+                        "9.5": "109.95",
+                        "10": "109.95",
+                        "11": "109.95",
+                        "11.5": "109.95",
+                        "12": "109.95"
+                    },
+                    "onhand": {
+                        "6": "16",
+                        "6.5": "30",
+                        "7": "81",
+                        "7.5": "280",
+                        "8": "484",
+                        "8.5": "952",
+                        "9": "796",
+                        "9.5": "637",
+                        "10": "143",
+                        "11": "25",
+                        "11.5": "23",
+                        "12": "15"
+                    },
+                    "asin": {
+                        "6": "B08QTPFN6M",
+                        "6.5": "B08QTT3L4L",
+                        "7": "B08QV4QT2N",
+                        "7.5": "B08QV1VPDR",
+                        "8": "B08QTP65CG",
+                        "8.5": "B08QTXCJW1",
+                        "9": "B08QVNT9CQ",
+                        "9.5": "B08QV4NBPW",
+                        "10": "B08QVHQ54S",
+                        "11": "B08QV49NCM",
+                        "11.5": "B08QV66TM7",
+                        "12": "B08QVGNXBW"
+                    }
+                },
+                "2a_-_narrow": {
+                    "price": {
+                        "8.5": "109.95"
+                    },
+                    "onhand": {
+                        "8.5": "3"
+                    },
+                    "asin": {
+                        "8.5": "B08QV8PF3T"
+                    }
+                }
+            },
+            "item_photo_files": [
+                "81zeWxGFVQS.jpg",
+                "81YNz6pP9HS.jpg",
+                "71tBDCMzHyS.jpg",
+                "811RNwkmDLS.jpg",
+                "714NJMCb9eS.jpg",
+                "71LA2gI4amS.jpg"
+            ],
+            "item_photo": [
+                "https://m.media-amazon.com/images/I/81zeWxGFVQS._AC_SR700,525_.jpg",
+                "https://m.media-amazon.com/images/I/81YNz6pP9HS._AC_SR700,525_.jpg",
+                "https://m.media-amazon.com/images/I/71tBDCMzHyS._AC_SR700,525_.jpg",
+                "https://m.media-amazon.com/images/I/811RNwkmDLS._AC_SR700,525_.jpg",
+                "https://m.media-amazon.com/images/I/714NJMCb9eS._AC_SR700,525_.jpg",
+                "https://m.media-amazon.com/images/I/71LA2gI4amS._AC_SR700,525_.jpg"
+            ],
+            "item_url": "https://www.zappos.com/p/brooks-ghost-14/product/9515355"
+        },
+
+        :param products: _description_
+        :type products: _type_
+        """
+        for product in products:
+            product_id = self.gen_item_id(product['zappos_id'], product['color'])
+            upsert(self.session, Item, dict(
+                id=product_id,
+                model=product['zappos_id'],
+                name=product['item_name'],
+                url=product['item_url'],
+                brand=product['brand'],
+                gender=product['gender'],
+                color=product['color']
+            ))
+            self.session.commit()
+
+            # Photo
+            for photo in product['item_photo']:
+                upsert(self.session, Photo, dict(
+                    item_id=product_id,
+                    url=photo,
+                ))
+            self.session.commit()
+
+            # Category
+            for category in product["category"]:
+                upsert(self.session, Category, dict(
+                    item_id=product_id,
+                    value=category,
+                ))
+            self.session.commit()
+
+            # Product Specification
+            for p_spec in product["product_specifications"]:
+                upsert(self.session, ProductSpecification, dict(
+                    item_id=product_id,
+                    value=p_spec
+                ))
+            self.session.commit()
+
+            for width in product['width'].keys():
+                width_size_id = upsert(self.session, WidthSize, dict(
+                    size=width
+                ))
+                self.session.commit()
+                width_id = upsert(self.session, Width, dict(
+                    item_id=product_id,
+                    width_size_id=width_size_id,
+                ))
+                self.session.commit()
+                info = product['width'][width]
+                for size in info['price'].keys():
+                    asin = info['asin'][size]
+                    onhand = info['onhand'][size]
+                    price = self.nb_str_processing(info['price'][size])
+                    size = self.remove_error_chars(size)
+                    upsert(self.session, Size, dict(
+                        width_id=width_id,
+                        size=size,
+                        price=price,
+                        onhand=onhand,
+                        asin=asin
+                    ))
+                    self.session.commit()
 
     def load_update(self, products):
         for product in products:
@@ -252,28 +473,32 @@ class ZapposLoader:
                 self.session.commit()
 
             # ProductSpecification
+            # TODO: maybe store id here
             db_product_spec = (
-                self.session.query(ProductSpecification)
+                self.session.query(ProductSpecification.value)
                 .filter(ProductSpecification.item_id == product_id)
                 .all()
             )
-            if db_product_spec:
-                # update
-                self.session.query(ProductSpecification).filter(
-                    ProductSpecification.item_id == product_id
-                ).update(
-                    {
-                        "value": product["product_specifications"],
-                        "edited": datetime.datetime.now(datetime.timezone.utc),
-                    },
-                    synchronize_session=False
-                )
-            else:
-                # add
-                ps = ProductSpecification(
-                    item_id=product_id, value=product["product_specifications"]
-                )
-                self.session.add(ps)
+            # update
+            for row in product["product_specifications"]:
+                if row in [x[0] for x in db_product_spec]:
+                    # TODO: use id from db_product_spec to filter
+                    self.session.query(ProductSpecification).filter(
+                        ProductSpecification.item_id == product_id,
+                        ProductSpecification.value == row,
+                    ).update(
+                        {
+                            "value": row,
+                            "edited": datetime.datetime.now(datetime.timezone.utc),
+                        },
+                        synchronize_session=False
+                    )
+                else:
+                    # add
+                    ps = ProductSpecification(
+                        item_id=product_id, value=row
+                    )
+                    self.session.add(ps)
             self.session.commit()
 
     def load(self, products_list):

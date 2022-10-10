@@ -14,6 +14,7 @@ from notification.slack import SlackNotifier
 from config import get_config
 from loaders.moosejaw import MoosejawLoader
 from loaders.zappos import ZapposLoader
+from loaders.backcountry import BackcountryLoader
 
 app = Flask(__name__, template_folder='./manager/templates')
 app.logger.setLevel(logging.INFO)
@@ -65,6 +66,7 @@ def worker_done():
     loader_class_map = {
         'moosejaw': MoosejawLoader,
         'zappos': ZapposLoader,
+        'backcountry': BackcountryLoader,
     }
     
     loader_class = loader_class_map.get(name, "")
