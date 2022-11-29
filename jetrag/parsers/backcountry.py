@@ -41,7 +41,7 @@ class BackcountryParser:
             meta['gender'] = 'unisex'
 
         meta['product_specifications'] = skus['props']['pageProps']['product']['bulletPoints'] if 'bulletPoints' in skus['props']['pageProps']['product'] else []
-        meta['tech_specs'] = {x["name"]:x["value"] for x in skus['props']['pageProps']['product']['features']}
+        meta['tech_specs'] = {x["name"]:x["value"][:512] for x in skus['props']['pageProps']['product']['features']}
 
 
         # other detail photos

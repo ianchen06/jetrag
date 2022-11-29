@@ -1,6 +1,7 @@
 import logging
 import datetime
 import hashlib
+import time
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
@@ -65,14 +66,19 @@ class BackcountryLoader:
 
     # TODO: refactor into common lib
     def upsert(self, model, insert_dict, where_list, fetch=False):
+        t1 = time.time()
         inserted = model(**insert_dict)
-        self.session.add(inserted)
+        to_update = False
         try:
+            self.session.add(inserted)
             self.session.commit()
         except Exception as e:
-            if 'ER_DUP_ENTRY' not in str(e):
-                raise e
             self.session.rollback()
+            if 'Duplicate entry' not in str(e):
+                raise Exception(f"error inserting, model:{model}, data: {insert_dict}") from e
+            to_update = True
+        
+        if to_update:
             stmt = (
                 update(model)
                 .where(*where_list)
@@ -83,6 +89,9 @@ class BackcountryLoader:
             )
             self.session.execute(stmt)
             self.session.commit()
+
+        t2 = time.time()
+        logger.info(f'to_update: {to_update}, time: {t2-t1}, model: {model}, insert: {insert_dict}')
         if not fetch:
             return
         stmt = select(model.id).where(*where_list)
@@ -152,6 +161,8 @@ class BackcountryLoader:
         :type variants: _type_
         """
         for variant in variants:
+            logger.info(f'variant: {variant}')
+            variant['color'] = variant['color'] if variant['color'] else 'none'
             item_id = self.gen_item_id(variant['backcountry_id'], variant['color'])
             insert_dict = dict(
                 id=item_id,
@@ -160,7 +171,7 @@ class BackcountryLoader:
                 url=variant['item_url'],
                 brand=variant['brand'],
                 gender=variant['gender'],
-                color=variant['color'], 
+                color=variant['color'],
             )
             where_list = [Item.id == item_id]
             self.upsert(Item, insert_dict, where_list)

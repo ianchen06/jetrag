@@ -22,12 +22,27 @@ class Backcountry:
         self.dt = datetime.datetime.now().strftime("%Y%m%d")
         self.http = HTTPDriver()
         self.headers = cfg['headers']
+        self.max_retry_cnt = 3
+        self.http_timeout_seconds = 10
         self.parser = BackcountryParser()
         self.loader = BackcountryLoader(sql_alchemy_cfg, '', self.dt)
 
     def __get_page(self, url):
-        res = requests.request('GET', url, headers=self.headers, timeout=10)
-        return res
+        cnt = 0
+        errors = []
+        while True:
+            try:
+                return requests.request('GET', url, headers=self.headers, timeout=self.http_timeout_seconds)
+            except requests.exceptions.ReadTimeout as e:
+                logger.info(e)
+                errors.append(e)
+            except requests.exceptions.ConnectionError as e:
+                logger.info(e)
+                errors.append(e)
+            cnt += 1
+            if cnt > self.max_retry_cnt:
+                raise Exception(f"Retry exceeded {self.max_retry_cnt} times, url: {url}, reasons: {errors}")
+            time.sleep(1)
 
     def dispatch(self):
         logger.info('dispatching job')
@@ -44,6 +59,7 @@ class Backcountry:
         all_activities = re.findall(r'All Activities</.+?</ul>', res.text)[0]
         activities_urls = re.findall(r'<a class="chakra-link css-\w+?" href="(/[\w-]+?)">.+?</a>', all_activities)
         category_urls = urls+activities_urls
+        logger.info(category_urls)
         for url in category_urls:
             self.queue.put({'method': 'get_category', 'args': [self.base_url+url+'?show=all']})
         return category_urls
@@ -58,9 +74,14 @@ class Backcountry:
         :rtype: list
         """
         res = self.__get_page(url)
-        total_page = int(re.findall(r'Page 1 of (.+?)<', res.text)[0])
-        for np in range(total_page):
-            self.queue.put({'method': 'list_products', 'args': [url+f"?page={np}"]})
+        try:
+            total_page = int(re.findall(r'Page 1 of (.+?)<', res.text)[0])
+        except IndexError:
+            logger.info(f"{url} has no total_page")
+            return
+        print(f"{url}: total_page: {total_page}")
+        for np in range(1, total_page+1):
+            self.queue.put({'method': 'list_products', 'args': [url+f"&page={np}"]})
         return f"{url}, total_page: {total_page}"
 
     def list_products(self, url):
@@ -72,7 +93,10 @@ class Backcountry:
         :rtype: list
         """
         res = self.__get_page(url)
-        data = re.findall(r'<a href="(/[\w-]+?)" variant="text" class="chakra-linkbox__overlay css-\w+?">', res.text)        
+        data = re.findall(r'<a href="(/[\w-]+?)" variant="text" class="chakra-linkbox__overlay css-\w+?">', res.text)
+        with open(f"/tmp/data/{url.replace('/', '-').replace(':', '-')}.txt", 'w') as f:
+            for url in data:
+                f.write(url + '\n')
         for url in data:
             self.queue.put({'method': 'get_product', 'args': [self.base_url + url]})
         return data

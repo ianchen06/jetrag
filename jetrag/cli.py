@@ -98,7 +98,7 @@ def crawler_start(ctx, name):
                 json={'dt': dt, 'name': f"{name}-{cfg['env']}"})
     _crawler_dispatch(cfg, name)
     worker_driver = get_driver(cfg, name)
-    for num in range(cfg['moosejaw']['concurrency']):
+    for num in range(cfg[name]['concurrency']):
         worker_driver.launch(['python', 'jetrag/cli.py', 'worker', 'start', name])
 
 @click.command('launch')
@@ -128,6 +128,17 @@ def worker_start(ctx, name):
     w = Worker(cfg, crawler, worker_driver, notifier)
     w.start()
 
+@click.command('execute')
+@click.argument('name')
+@click.argument('method')
+@click.argument('args')
+@click.pass_context
+def crawler_execute(ctx, name, method, args):
+    crawler = get_debug_crawler(name)
+    func = getattr(crawler, method)
+    res = func(args)
+    return res
+
 def get_debug_crawler(name):
     cfg = get_cfg(os.getenv("JETRAG_ENV", 'dev'))
     worker_driver = get_driver(cfg, name)
@@ -147,6 +158,7 @@ crawler.add_command(crawler_dispatch)
 crawler.add_command(crawler_start)
 crawler.add_command(crawler_launch)
 crawler.add_command(crawler_test)
+crawler.add_command(crawler_execute)
 
 # worker subcommands
 worker.add_command(worker_start)

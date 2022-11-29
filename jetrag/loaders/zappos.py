@@ -324,7 +324,6 @@ class ZapposLoader:
             )
             if db_photo:
                 db_photo = [x[0] for x in db_photo]
-            product['item_photo'] = list(set(product['item_photo']))
             for photo in product['item_photo']:
                 if photo not in db_photo:
                     p = Photo(item_id=product_id, url=photo)
@@ -337,10 +336,10 @@ class ZapposLoader:
                 try:
                     self.session.commit()
                 except Exception as e:
-                    # TODO: remove in future after debug
-                    if 'ER_DUP_ENTRY' in str(e):
-                        logger.info(product_id, photo, db_photo)
-                        raise Exception(f"{product_id}, {photo}, {db_photo}") from e
+                    self.session.rollback()
+                    if 'ER_DUP_ENTRY' not in str(e):
+                        raise e
+                    
             t2 = time.time()
             logger.debug(f"photo done: took {t2 - t1}s")
 
