@@ -4,16 +4,17 @@ import re
 import datetime
 
 import requests
+from bs4 import BeautifulSoup
 
 from http_client import HTTPDriver
-from parsers.backcountry import BackcountryParser
-from loaders.backcountry import BackcountryLoader
+from parsers.sierra import SierraParser
+from loaders.sierra import SierraLoader
 
 logger = logging.getLogger(__name__)
 
-class Backcountry:
+class Sierra:
     def __init__(self, cfg, queue, html_store, sql_alchemy_cfg, notifier):
-        self.name = 'backcountry'
+        self.name = 'sierra'
         self.cfg = cfg
         self.base_url = cfg['base_url']
         self.queue = queue
@@ -24,15 +25,24 @@ class Backcountry:
         self.headers = cfg['headers']
         self.max_retry_cnt = 3
         self.http_timeout_seconds = 10
-        self.parser = BackcountryParser()
-        self.loader = BackcountryLoader(sql_alchemy_cfg, '', self.dt)
+        self.parser = SierraParser()
+        self.loader = SierraLoader(sql_alchemy_cfg, '', self.dt)
 
     def __get_page(self, url):
         cnt = 0
         errors = []
         while True:
             try:
-                return requests.request('GET', url, headers=self.headers, timeout=self.http_timeout_seconds)
+                resp = requests.request(
+                    'GET',
+                    url,
+                    headers=self.headers,
+                    timeout=self.http_timeout_seconds,
+                    allow_redirects=False,
+                )
+                if 'Access Denied' in resp.text:
+                    raise Exception(f"Blocked, {url}")
+                return resp
             except requests.exceptions.ReadTimeout as e:
                 logger.info(e)
                 errors.append(e)
@@ -49,20 +59,18 @@ class Backcountry:
         self.queue.put({"method": "list_categories"})
 
     def list_categories(self):
-        """Get list of categories from Backcountry navigation bar
+        """Get list of categories from navigation bar
 
         :return: List of urls
         :rtype: list
         """
         res = self.__get_page(self.base_url)
-        urls = re.findall(r'<a class="chakra-link css-\w+?" href="(/[\w-]+?)">\w+?</a><ul role="list" class="css-', res.text)
-        all_activities = re.findall(r'All Activities</.+?</ul>', res.text)[0]
-        activities_urls = re.findall(r'<a class="chakra-link css-\w+?" href="(/[\w-]+?)">.+?</a>', all_activities)
-        category_urls = urls+activities_urls
-        logger.info(category_urls)
-        for url in category_urls:
-            self.queue.put({'method': 'get_category', 'args': [self.base_url+url+'?show=all']})
-        return category_urls
+        soup = BeautifulSoup(res.text)
+        urls = [x['href'].split('?')[0] for x in soup.select('#navigation > div > div > div > div.nav-item.dropdown.navigation-dropdown.backdrop-toggle.pos-s.drawer-item > a')]
+        logger.info(urls)
+        for url in urls:
+            self.queue.put({'method': 'get_category', 'args': [self.base_url+url]})
+        return urls
 
     def get_category(self, url):
         """Get list of urls for all pages of the category
@@ -73,15 +81,13 @@ class Backcountry:
         :return: List of URLs of all pages of the category
         :rtype: list
         """
-        res = self.__get_page(url)
-        try:
-            total_page = int(re.findall(r'Page 1 of (.+?)<', res.text)[0])
-        except IndexError:
-            logger.info(f"{url} has no total_page")
-            return
+        url96 = url + '?perPage=96'
+        res = self.__get_page(url96)
+        last_page = re.findall(r'<a class="pageLink lastPage" href="/.+?~\d+?/(\d+?)/" aria-label="Go to Last Page">page \d+?</a>', res.text)[0]       
+        total_page = int(last_page)
         print(f"{url}: total_page: {total_page}")
         for np in range(1, total_page+1):
-            self.queue.put({'method': 'list_products', 'args': [url+f"&page={np}"]})
+            self.queue.put({'method': 'list_products', 'args': [url+f"{np}/?perPage=96"]})
         return f"{url}, total_page: {total_page}"
 
     def list_products(self, url):
@@ -93,11 +99,11 @@ class Backcountry:
         :rtype: list
         """
         res = self.__get_page(url)
-        data = re.findall(r'<a href="(/[\w-]+?)" variant="text" class="chakra-linkbox__overlay css-\w+?">', res.text)
-        # with open(f"/tmp/data/{url.replace('/', '-').replace(':', '-')}.txt", 'w') as f:
-        #     for url in data:
-        #         f.write(url + '\n')
+        product_detail_regex = '<a id="productLink.+?" title=".+?" href="(.+?)" class="js-productThumbnail">'        # with open(f"/tmp/data/{url.replace('/', '-').replace(':', '-')}.txt", 'w') as f:
+        data = re.findall(product_detail_regex, res.text)
+        logger.info(f"Found {len(data)} products on {url}")
         for url in data:
+            url = url.split('?')[0]
             self.queue.put({'method': 'get_product', 'args': [self.base_url + url]})
         return data
 
@@ -109,13 +115,7 @@ class Backcountry:
         :raises Exception: Not a valid product page
         """
 
-        res = self.__get_page(url)
-        # Check if blocked
-        if "We're so sorry, but our Fancy Site Protection" in res.text:
-            raise Exception("blocked")
-
-        # If some other weird page
-        
+        res = self.__get_page(url)    
         self.store_html({'url': url, 'html': res.text})
         data = self.parser.parse(res.text)
         self.store_db(data)
@@ -127,7 +127,7 @@ class Backcountry:
         self.store_db(data)
 
     def store_html(self, data):
-        self.html_store.put(f'backcountry/{self.dt}', data)
+        self.html_store.put(f'sierra/{self.dt}', data)
 
     def store_db(self, data):
         self.loader.load_update(data)

@@ -5,3 +5,4 @@ venv
 .chalice/deployments/
 .chalice/venv/
 *.env
+.DS_Store

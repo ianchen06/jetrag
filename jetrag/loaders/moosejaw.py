@@ -2,14 +2,14 @@ import uuid
 import logging
 import datetime
 import hashlib
+import time
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 import boto3
 
 # For MySQL upsert
-from sqlalchemy import func
-from sqlalchemy.dialects.mysql import insert
+from sqlalchemy import update, select
 
 from models.moosejaw import *
 
@@ -48,127 +48,44 @@ class MoosejawLoader:
             self.session.commit()
 
     # TODO: refactor into common lib
-    def upsert(self, model, insert_dict):
-        """model can be a db.Model or a table(), insert_dict should contain a primary or unique key."""
-        inserted = insert(model).values(**insert_dict)
-        if 'id' in insert_dict:
-            upserted = inserted.on_duplicate_key_update(
-                **{k: inserted.inserted[k] for k, v in insert_dict.items()},
-                edited=datetime.datetime.now(datetime.timezone.utc),
-            )
-            res = self.session.execute(upserted)
-            return insert_dict['id']
+    def upsert(self, model, insert_dict, where_list, fetch=False):
+        t1 = time.time()
+        inserted = model(**insert_dict)
+        to_update = False
+        try:
+            self.session.add(inserted)
+            self.session.commit()
+        except Exception as e:
+            self.session.rollback()
+            if 'Duplicate entry' not in str(e):
+                raise Exception(f"error inserting, model:{model}, data: {insert_dict}") from e
+            to_update = True
         
-        upserted = inserted.on_duplicate_key_update(
-            id=func.LAST_INSERT_ID(model.id),
-            **{k: inserted.inserted[k] for k, v in insert_dict.items()},
-            edited=datetime.datetime.now(datetime.timezone.utc),
-        )
+        if to_update:
+            stmt = (
+                update(model)
+                .where(*where_list)
+                .values(
+                    **insert_dict,
+                    edited=datetime.datetime.now(datetime.timezone.utc)
+                )
+            )
+            self.session.execute(stmt)
+            self.session.commit()
 
-        res = self.session.execute(upserted)
-        return res.lastrowid
+        t2 = time.time()
+        logger.info(f'to_update: {to_update}, time: {t2-t1}, model: {model}, insert: {insert_dict}')
+        if not fetch:
+            return
+        stmt = select(model.id).where(*where_list)
+        row = self.session.execute(stmt).first()
+        return row[0]
 
     def gen_item_id(self, item_code, color):
         input_ = f"{item_code}_{color}".encode('utf-8')
         hash_func = hashlib.shake_256()
         hash_func.update(input_)
         return hash_func.hexdigest(8)
-
-    def load_update_new(self, variants):
-        """load one product (all variants) into db
-
-        {
-            "size": [
-                {
-                    "item_no": "6773817",
-                    "size": "10",
-                    "price": "223.99"
-                },
-                {
-                    "item_no": "6773819",
-                    "size": "14",
-                    "price": "223.99"
-                }
-            ],
-            "brand": "Rab",
-            "color": "Bering Sea",
-            "item_url": "https://www.moosejaw.com/product/rab-women-s-cubit-stretch-down-hoody_10537936",
-            "item_code": "10537936",
-            "item_photo": [
-                "https://s7d1.scene7.com/is/image/MoosejawMB/10537936x1085886_zm?$product1000$",
-                "https://s7d1.scene7.com/is/image/MoosejawMB/10537936x1085886_vAlt4?$product700$",
-                "https://s7d1.scene7.com/is/image/MoosejawMB/10537936x1085886_vAlt3?$product700$",
-                "https://s7d1.scene7.com/is/image/MoosejawMB/10537936x1085886_vAlt1?$product700$",
-                "https://s7d1.scene7.com/is/image/MoosejawMB/10537936x1085886_vAlt2?$product700$"
-            ],
-            "product_specifications": [
-                "Features: Hood, Insulated, 4-Way Stretch, Water-resistant, Adjustable Drawcord Hem, Windproof, Zipper Garage",
-                "Weight: 17.1 oz",
-                "Back Length: 26.4 in.",
-                "Hood Type: Fixed",
-                "Fabric Weight: 3.78 oz / Square Yard",
-                "Windproof: Yes",
-                "Product Technology: Pertex Quantum, DWR",
-                "Disclaimer: We only ship this brand to US Addresses.",
-                "Gender: Womens",
-                "Best Use: Travel, Hiking",
-                "Fit Type: Slim Fit",
-                "Sleeve Length: Long Sleeve"
-            ],
-            "category": [
-                "Womens Outerwear",
-                "Womens Jackets",
-                "Womens Insulated Jackets",
-                "Womens Down Jackets"
-            ],
-            "item_name": "Rab Women's Cubit Stretch Down Hoody"
-        }
-
-        :param product: list of all variants
-        :type product: list
-        """
-        for variant in variants:
-            item_id = self.gen_item_id(variant["item_code"], variant["color"])
-
-            self.upsert(Item, dict(
-                id=item_id,
-                brand=variant["brand"],
-                item_code=variant["item_code"],
-                item_name=variant["item_name"],
-                item_url=variant["item_url"],
-                color=variant["color"],
-            ))
-            self.session.commit()
-
-            for category in variant["category"]:
-                self.upsert(Category, dict(
-                    item_id=item_id,
-                    value=category
-                ))
-            self.session.commit()
-
-            for photo in variant["item_photo"]:
-                self.upsert(Photo, dict(
-                    item_id=item_id,
-                    url=photo
-                ))
-            self.session.commit()
-
-            for row in variant['product_specifications']:
-                self.upsert(ProductSpecification, dict(
-                    item_id=item_id,
-                    value=row
-                ))
-            self.session.commit()
-
-            for row in variant["size"]:
-                self.upsert(Size, dict(
-                    item_id=item_id,
-                    size=row['size'],
-                    item_no=row["item_no"],
-                    price=row["price"],
-                ))
-                self.session.commit()
 
     def load_update(self, variants):
         """load one product (all variants) into db
@@ -200,119 +117,64 @@ class MoosejawLoader:
             # insert Item, ProductSpecification, Category, Photo
 
             # Item
-            item = Item(
+            insert_dict = dict(
                 id=item_id,
                 brand=variant["brand"],
                 item_code=variant["item_code"],
                 item_name=variant["item_name"],
                 item_url=variant["item_url"],
-                color=variant["color"],
-            )
-            self.session.add(item)
-            try:
-                self.session.flush()
-            except Exception as e:
-                if "Duplicate" in str(e):
-                    self.session.rollback()
-                    self.session.query(Item).filter(Item.id == item_id).update(
-                        {
-                            "item_name": variant["item_name"],
-                            "brand": variant["brand"],
-                            "item_url": variant["item_url"],
-                            "edited": datetime.datetime.now(datetime.timezone.utc),
-                        },
-                        synchronize_session=False,
-                    )
-                else:
-                    raise e
-            self.session.commit()
+                color=variant["color"],            )
+            where_list = [Item.id == item_id]
+            self.upsert(Item, insert_dict, where_list)
 
             # ProductSpecification
-            db_product_spec = (
-                self.session.query(ProductSpecification)
-                .filter(ProductSpecification.item_id == item_id)
-                .all()
+            insert_dict = dict(
+                item_id=item_id,
+                value=variant["product_specifications"]
             )
-            if db_product_spec:
-                # update
-                self.session.query(ProductSpecification).filter(
-                    ProductSpecification.item_id == item_id
-                ).update(
-                    {
-                        "value": variant["product_specifications"],
-                        "edited": datetime.datetime.now(datetime.timezone.utc),
-                    }
-                )
-            else:
-                # add
-                ps = ProductSpecification(
-                    item_id=item_id, value=variant["product_specifications"]
-                )
-                self.session.add(ps)
-            self.session.commit()
+            where_list = [
+                ProductSpecification.item_id == item_id,
+                ProductSpecification.value == variant["product_specifications"],
+            ]
+            self.upsert(ProductSpecification, insert_dict, where_list)
 
             # Category
-            db_category = (
-                self.session.query(Category.value)
-                .filter(Category.item_id == item_id)
-                .all()
-            )
-            if db_category:
-                db_category = [x[0] for x in db_category]
             for category in variant["category"]:
-                if category not in db_category:
-                    c = Category(item_id=item_id, value=category)
-                    self.session.add(c)
-                else:
-                    self.session.query(Category).filter(
-                        Category.item_id == item_id, Category.value == category
-                    ).update({"edited": datetime.datetime.now(datetime.timezone.utc)})
-                self.session.commit()
+                insert_dict = dict(
+                    item_id=item_id,
+                    value=category
+                )
+                where_list = [
+                    Category.item_id == item_id,
+                    Category.value == category,
+                ]
+                self.upsert(Category, insert_dict, where_list)
 
             # Photo
-            db_photo = (
-                self.session.query(Photo.url).filter(Photo.item_id == item_id).all()
-            )
-            if db_photo:
-                db_photo = [x[0] for x in db_photo]
             for photo in variant["item_photo"]:
-                if photo not in db_photo:
-                    p = Photo(item_id=item_id, url=photo)
-                    self.session.add(p)
-                else:
-                    self.session.query(Photo).filter(
-                        Photo.item_id == item_id, Photo.url == photo
-                    ).update({"edited": datetime.datetime.now(datetime.timezone.utc)})
-                self.session.commit()
+                insert_dict = dict(
+                    item_id=item_id,
+                    url=photo
+                )
+                where_list = [
+                    Photo.item_id == item_id,
+                    Photo.url == photo
+                ]
+                self.upsert(Photo, insert_dict, where_list)
 
             # Size
             for row in variant['size']:
-                s = Size(
+                insert_dict = dict(
                     item_id=item_id,
                     size=row['size'],
                     item_no=row["item_no"],
                     price=row["price"],
                 )
-                self.session.add(s)
-                try:
-                    self.session.flush()
-                except Exception as e:
-                    if "Duplicate" in str(e):
-                        self.session.rollback()
-                        self.session.query(Size).filter(
-                            Size.item_id == item_id, Size.size == row['size']
-                        ).update(
-                            {
-                                "size": row['size'],
-                                "item_no": row["item_no"],
-                                "price": row["price"],
-                                "edited": datetime.datetime.now(datetime.timezone.utc),
-                            },
-                            synchronize_session=False,
-                        )
-                    else:
-                        raise e
-                self.session.commit()
+                where_list = [
+                    Size.item_id == item_id,
+                    Size.size == row['size']
+                ]
+                self.upsert(Size, insert_dict, where_list)
 
     def load(self, products_list):
         done = {}

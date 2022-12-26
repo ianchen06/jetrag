@@ -60,7 +60,7 @@ cfg = {
                 'info_webhook_url': os.getenv('ZAPPOS_INFO_SLACK_WEBHOOK_URL'),
             }
         },
-        'concurrency': 5,
+        'concurrency': 20,
         'base_url': 'https://www.zappos.com',
         'headers': {
             'authority': 'www.zappos.com',
@@ -81,9 +81,23 @@ cfg = {
                 'info_webhook_url': os.getenv('BACKCOUNTRY_INFO_SLACK_WEBHOOK_URL'),
             }
         },
-        'concurrency': 1,
+        'concurrency': 10,
         'base_url': 'https://www.backcountry.com',
         'headers': {
+        },
+    },
+    'sierra': {
+        'notifications': {
+            'type': 'slack',
+            'slack': {
+                'webhook_url': os.getenv('SLACK_WEBHOOK_URL'),
+                'info_webhook_url': os.getenv('SIERRA_INFO_SLACK_WEBHOOK_URL'),
+            }
+        },
+        'concurrency': 10,
+        'base_url': 'https://www.sierra.com',
+        'headers': {
+            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36',
         },
     },
     'moosejaw': {
@@ -98,12 +112,11 @@ cfg = {
         'base_url': 'https://moosejaw.com',
         'headers': {
             'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9',
-            'accept-encoding': 'gzip, deflate, br',
             'accept-language': 'en-US,en;q=0.9',
             'pragma': 'no-cache',
+            'asdf': 'qwe',
             'referer': "https://www.moosejaw.com/",
-            "upgrade-insecure-requests": "1",
-            'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/105.0.0.0 Safari/537.36',
+            'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/107.0.0.0 Safari/537.36',
         },
     }
 }

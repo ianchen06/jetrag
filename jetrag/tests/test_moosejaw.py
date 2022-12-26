@@ -40,20 +40,20 @@ class TestMoosejaw(unittest.TestCase):
             cfg["db"]["sqlalchemy"],
             FakeNotifier(),
         )
-        categories = p.get_category('https://moosejaw.com/search/travel-gear')
+        categories = p.get_category('https://www.backcountry.com/womens-footwear')
         self.logger.info(categories)
 
-    # def test_list_products(self):
-    #     cfg = get_config("test")
-    #     p = Backcountry(
-    #         cfg["backcountry"],
-    #         FakeQueue("backcountry"),
-    #         FakeS3Store(),
-    #         cfg["db"]["sqlalchemy"],
-    #         FakeNotifier(),
-    #     )
-    #     products = p.list_products('https://www.backcountry.com/womens-footwear')
-    #     self.logger.info(products)
+    def test_list_products(self):
+        cfg = get_config("test")
+        p = Moosejaw(
+            cfg["moosejaw"],
+            FakeQueue("moosejaw"),
+            FakeS3Store(),
+            cfg["db"]["sqlalchemy"],
+            FakeNotifier(),
+        )
+        products = p.list_products('https://www.backcountry.com/womens-footwear')
+        self.logger.info(products)
 
     # def test_list_products(self):
     #     cfg = get_config("test")
@@ -66,16 +66,16 @@ class TestMoosejaw(unittest.TestCase):
     #     )
     #     p.list_products('https://www.zappos.com/null/.zso?p=1')
 
-    def test_get_product(self):
-        cfg = get_config("test")
-        p = Moosejaw(
-            cfg["moosejaw"],
-            FakeQueue("moosejaw"),
-            FakeS3Store(),
-            cfg["db"]["sqlalchemy"],
-            FakeNotifier(),
-        )
-        p.get_product('https://www.moosejaw.com/product/bern-macon-2-0-helmet-bike_10527690')
+    # def test_get_product(self):
+    #     cfg = get_config("test")
+    #     p = Zappos(
+    #         cfg["zappos"],
+    #         FakeQueue("zappos"),
+    #         FakeS3Store(),
+    #         cfg["db"]["sqlalchemy"],
+    #         FakeNotifier(),
+    #     )
+    #     p.get_product('https://www.zappos.com/product/9836826')
 
     def test_parser(self):
         html = open('./tests/html/moosejaw/product.html').read()
@@ -96,7 +96,7 @@ class TestMoosejaw(unittest.TestCase):
 
         cfg = get_config("test")
         sql_cfg = cfg['db']['sqlalchemy']
-        loader = MoosejawLoader(sql_cfg, '', '20220830', True)
+        loader = MoosejawLoader(sql_cfg, '', '20221006', True)
         loader.load_update(res)
 
 if __name__ == "__main__":
