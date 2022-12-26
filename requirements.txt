@@ -10,3 +10,4 @@ sqlalchemy-aurora-data-api
 flask
 pyyaml
 pytz
+pycurl

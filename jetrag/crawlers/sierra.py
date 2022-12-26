@@ -2,8 +2,10 @@ import time
 import logging
 import re
 import datetime
+import certifi
+from io import BytesIO
 
-import requests
+import pycurl
 from bs4 import BeautifulSoup
 
 from http_client import HTTPDriver
@@ -11,6 +13,10 @@ from parsers.sierra import SierraParser
 from loaders.sierra import SierraLoader
 
 logger = logging.getLogger(__name__)
+
+class HTTPResponse:
+    def __init__(self, text):
+        self.text = text
 
 class Sierra:
     def __init__(self, cfg, queue, html_store, sql_alchemy_cfg, notifier):
@@ -24,7 +30,7 @@ class Sierra:
         self.http = HTTPDriver()
         self.headers = cfg['headers']
         self.max_retry_cnt = 3
-        self.http_timeout_seconds = 10
+        self.http_timeout_seconds = 30
         self.parser = SierraParser()
         self.loader = SierraLoader(sql_alchemy_cfg, '', self.dt)
 
@@ -33,26 +39,30 @@ class Sierra:
         errors = []
         while True:
             try:
-                resp = requests.request(
-                    'GET',
-                    url,
-                    headers=self.headers,
-                    timeout=self.http_timeout_seconds,
-                    allow_redirects=False,
-                )
-                if 'Access Denied' in resp.text:
-                    raise Exception(f"Blocked, {url}")
-                return resp
-            except requests.exceptions.ReadTimeout as e:
-                logger.info(e)
-                errors.append(e)
-            except requests.exceptions.ConnectionError as e:
-                logger.info(e)
-                errors.append(e)
-            cnt += 1
-            if cnt > self.max_retry_cnt:
-                raise Exception(f"Retry exceeded {self.max_retry_cnt} times, url: {url}, reasons: {errors}")
-            time.sleep(1)
+                buffer = BytesIO()
+                c = pycurl.Curl()
+                c.setopt(pycurl.HTTPHEADER, [f"{k}: {v}" for k,v in self.headers.items()])
+                c.setopt(pycurl.URL, url)
+                c.setopt(pycurl.ENCODING, 'gzip')
+                c.setopt(pycurl.WRITEDATA, buffer)
+                c.setopt(pycurl.CAINFO, certifi.where())
+                c.perform()
+                status_code = c.getinfo(pycurl.HTTP_CODE)
+                c.close()
+
+                if status_code > 300:
+                    raise Exception(f"Fetch url error: {url}-{status_code}")
+
+                body = buffer.getvalue()
+                # Body is a byte string.
+                # We have to know the encoding in order to print it to a text file
+                # such as standard output.
+                return HTTPResponse(body.decode('utf-8'))
+            except:
+                cnt += 1
+                if cnt > self.max_retry_cnt:
+                    raise Exception(f"Retry exceeded {self.max_retry_cnt} times, url: {url}, reasons: {errors}")
+                time.sleep(1)
 
     def dispatch(self):
         logger.info('dispatching job')

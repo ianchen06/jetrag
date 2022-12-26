@@ -97,7 +97,13 @@ cfg = {
         'concurrency': 1,
         'base_url': 'https://www.sierra.com',
         'headers': {
-            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36',
+            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/85.0.4183.83 Safari/537.36',
+            'Connection': 'keep-alive',
+            'Upgrade-Insecure-Requests': '1',
+            'Host': 'www.sierra.com',
+            'TE': 'Trailers',
+            'Accept-Language': 'ja,en-US;q=0.7,en;q=0.3',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
         },
     },
     'moosejaw': {
